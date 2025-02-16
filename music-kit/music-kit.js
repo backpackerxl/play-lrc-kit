@@ -19,6 +19,7 @@ const LrcOrLyrcKit = (function (win, doc) {
         _oldNode = null,
         _firstMp = 0,
         _halfContainerH = 0,
+        _normalCSS = true,
         _audio = null;
 
     // baseColor -> #979797 hilightColor -> #ff5724 fontSize -> 1.2rem -> lineHeight 4rem（不建议修改这个数值）
@@ -31,29 +32,34 @@ const LrcOrLyrcKit = (function (win, doc) {
             lineHeight,
             tlyricSize,
             tlyricLineHeight,
+            filter,
             pMargin
         } = options;
-        return `:root{--${id}-pMargin:${pMargin};--${id}-poshilightColor:${poshilightColor};--${id}-baseColor:${baseColor};--${id}-fontSize:${fontSize};--${id}-hilightColor:${hilightColor};--${id}-lineHeight:${lineHeight};--${id}-tlyricSize:${tlyricSize};--${id}-tlyricLineHeight:${tlyricLineHeight};}.hide-tlyric p.tly_word{display:none;}#${id} p.now,#${id} p.now .tly_word{transform: scale(1.05);transition: transform .3s ease-in-out; color:var(--${id}-poshilightColor);}#${id} p{color:var(--${id}-baseColor);margin:var(--${id}-pMargin) 0;padding:0;font-size:var(--${id}-fontSize);text-align:center;line-height:var(--${id}-lineHeight)}#${id} p span{padding-right:6px;}#${id} p.tly_word{margin:0 !important;font-size: var(--${id}-tlyricSize);line-height: var(--${id}-tlyricLineHeight);}#${id} p.color{color:var(--${id}-hilightColor);transition:all.1s ease-in-out}#${id} p span.now{color:transparent;background-image:linear-gradient(to left,var(--${id}-poshilightColor) calc(100% - calc(var(--${id}-progress) * 100%)),var(--${id}-hilightColor) calc(100% - calc(var(--${id}-progress) * 100%)));background-clip:text;-webkit-background-clip:text;transition: all .5s;}`;
+        return `:root{--${id}-pMargin:${pMargin};--${id}-filter:${filter};--${id}-poshilightColor:${poshilightColor};--${id}-baseColor:${baseColor};--${id}-fontSize:${fontSize};--${id}-hilightColor:${hilightColor};--${id}-lineHeight:${lineHeight};--${id}-tlyricSize:${tlyricSize};--${id}-tlyricLineHeight:${tlyricLineHeight};}.hide-tlyric p.tly_word{display:none;}#${id} p.now,#${id} p.now .tly_word{transform: scale(1.05);filter:blur(0);transition: transform .3s ease-in-out; color:var(--${id}-poshilightColor);}#${id} p{color:var(--${id}-baseColor);filter:blur(var(--${id}-filter));margin:var(--${id}-pMargin) 0;padding:0;font-size:var(--${id}-fontSize);text-align:center;line-height:var(--${id}-lineHeight)}#${id} p span{padding-right:6px;}#${id} p.tly_word{margin:0 !important;font-size: var(--${id}-tlyricSize);line-height: var(--${id}-tlyricLineHeight);}#${id} p.color{color:var(--${id}-hilightColor);transition:all.1s ease-in-out}#${id} p span.now{color:transparent;background-image:linear-gradient(to left,var(--${id}-poshilightColor) calc(100% - calc(var(--${id}-progress) * 100%)),var(--${id}-hilightColor) calc(100% - calc(var(--${id}-progress) * 100%)));background-clip:text;-webkit-background-clip:text;transition: all .5s;}`;
     }
 
     // 渲染歌词，并初始化歌词数据，方便后面的歌词动效的使用
     function _renderLrc() {
-        const { el, lyric_data, tlyric_lyric, lineWidth, options, func } = _initOpt;
+        const { el, lyric_data, tlyric_lyric, lineWidth, options, func, splitLetter, letterAnimate } = _initOpt;
 
         if (!el || !lyric_data || !func) {
             throw new Error("渲染视图的挂载点或歌词数据或歌词处理函数不能为空");
         }
 
-        const lw = lineWidth || 300;
+        const lw = lineWidth || 300,
+            _splitLetter = splitLetter || false;
 
         let colorOptions = options || {
-            baseColor: '#979797',
-            hilightColor: '#ff5724',
-            fontSize: '1.4rem',
+            baseColor: 'rgb(233, 235, 235, .5)',
+            poshilightColor: 'rgb(233, 235, 235, .5)',
+            hilightColor: '#fff',
+            fontSize: '1.2rem',
             lineHeight: '1.8rem',
-            tlyricSize: '1.2rem',
-            tlyricLineHeight: '1.8rem',
-            pMargin: '15px'
+            tlyricSize: '1rem',
+            tlyricLineHeight: '1.6rem',
+            hilightBgColor: 'rgb(204, 204, 204, .2)',
+            filter: 'blur(0)',
+            pMargin: '1rem'
         };
 
         // 如果未设置定位颜色
@@ -84,7 +90,23 @@ const LrcOrLyrcKit = (function (win, doc) {
                 const spanTpl = doc.createDocumentFragment();
                 item.word_arr.forEach(word => {
                     const span = doc.createElement('span');
-                    span.innerText = word[1];
+                    if (_splitLetter) {
+                        span.innerHTML = word[1].replace(/\S/g, '<b>$&</b>');
+                        let startDelay = 0,
+                            longTime = word[0][1];
+                        const bC = span.querySelectorAll('b');
+                        if (bC.length > 0) {
+                            longTime = Math.floor(longTime / bC.length); // 单个字母的持续时间
+                            bC[0].style.setProperty('--delay', 0 + 'ms'); // 设置第一个
+                            bC[0].style.setProperty('--duration', longTime + 'ms'); // 设置第一个
+                            for (let i = 1; i < bC.length; i++) {
+                                bC[i].style.setProperty('--delay', `${startDelay += longTime}ms`);
+                                bC[i].style.setProperty('--duration', longTime + 'ms');
+                            }
+                        }
+                    } else {
+                        span.innerText = word[1];
+                    }
                     spanTpl.appendChild(span);
                     spanArr.push({
                         span: span,
@@ -109,9 +131,25 @@ const LrcOrLyrcKit = (function (win, doc) {
             objTemp.time = item.current_time;
             _lrcNodeArr.push(objTemp);
         });
+        const id = el.id;
+
+        let letterAnimateArr = [];
         // 注入样式
+        if (letterAnimate) {
+            let an = [],
+                afm = [],
+                atf = [];
+            letterAnimate.forEach(animate => {
+                letterAnimateArr.push(`@keyframes ${id}-${animate.animationName}{${animate.keyframes}}`);
+                an.push(`${id}-${animate.animationName}`);
+                afm.push(`${animate.animationFillMode}`);
+                atf.push(`${animate.animationTimingFunction}`);
+            });
+            letterAnimateArr.push(`.custom-animation span.now {color: var(--${id}-baseColor) !important;background-image: none !important;}.custom-animation span.now b {display: inline-block;animation-duration: var(--duration);animation-fill-mode: ${afm.join(',')};animation-timing-function: ${atf.join(',')};animation-name: ${an.join(',')};animation-delay: var(--delay);}`);
+        }
+
         const styleCss = doc.createElement('style');
-        styleCss.textContent = doStyleCss(colorOptions, el.id);
+        styleCss.textContent = doStyleCss(colorOptions, id) + letterAnimateArr.join('');
         doc.documentElement.querySelector('head').appendChild(styleCss);
 
         el.appendChild(lrcTpl);
@@ -330,12 +368,12 @@ const LrcOrLyrcKit = (function (win, doc) {
         let timer;
 
         // 监听播放事件
-        _audio.addEventListener('play', () => {
+        _audio.addEventListener('play', function () {
             _normal = true;
             if (timer) {
                 clearTimeout(timer);
             }
-            _animationId = requestAnimationFrame(_timerMove);
+            _timerMove();
             timer = setTimeout(() => {
                 _normal = false;
             }, 600);
@@ -401,10 +439,12 @@ const LrcOrLyrcKit = (function (win, doc) {
                 span_arr.forEach(el => {
                     if (el.stm <= currentTime && el.span.classList.length === 0) {
                         el.span.classList.add('now');
-                        if (_normal) {
-                            _animateProgress(el.span, 0);
-                        } else {
-                            _animateProgress(el.span, el.duration);
+                        if (_normalCSS) {
+                            if (_normal) {
+                                _animateProgress(el.span, 0);
+                            } else {
+                                _animateProgress(el.span, el.duration);
+                            }
                         }
                     }
                 });
@@ -696,7 +736,7 @@ const LrcOrLyrcKit = (function (win, doc) {
         });
 
         node.span_arr.forEach((spanNode) => {
-            if (spanNode.stm < target) {
+            if (spanNode.stm < target && _normalCSS) {
                 spanNode.span.classList.add('now');
                 spanNode.span.style.setProperty(`--${_lrcContainer.id}-progress`, 1);
             }
@@ -758,6 +798,13 @@ const LrcOrLyrcKit = (function (win, doc) {
         getMusicTime(currentTime) {
             return _getMusicTime(currentTime);
         },
+        changeAnimation() {
+            if (!_initOpt.splitLetter) {
+                console.warn("单词未分割，自定义动画将不会生效!!!");
+            }
+            _lrcContainer.classList.toggle('custom-animation');
+            _normalCSS = !_normalCSS;
+        },
         showThumLryc(currentTime, oNode, highlight) {
             _showThumLryc(currentTime, oNode, highlight);
         },
@@ -777,6 +824,7 @@ const MusicControl = (function (doc) {
     let _loadBarPlusFunc = null,
         _clickProgressFunc = null,
         _bound = null,
+        _moveAnId = null,
         _cNow = 0,
         _moveing = false,
         _showLyrc = 0;
@@ -791,13 +839,13 @@ const MusicControl = (function (doc) {
             throw new Error('el不是一个html播放器');
         }
 
-        if (!opt.oPlay || !opt.oPause || !opt.oTotal || !opt.oProgressTop || !opt.oNowTime || !opt.oSlider || !opt.oProgress || !opt.oProgressUnder) {
-            throw new Error(`oPlay:播放控件或 oProgressTop: 进度条或 oPause:暂停控件或 oTotal:总时间显示容器或 oNowTime:当前时间显示容器或 oSlider:拖动滑块或 oProgress:总滑动条或 oProgressUnder:进度条轨道不能为空`)
+        if (!opt.oTotal || !opt.oProgressTop || !opt.oNowTime || !opt.oSlider || !opt.oProgress || !opt.oProgressUnder) {
+            throw new Error(`oProgressTop: 进度条或 oTotal:总时间显示容器或 oNowTime:当前时间显示容器或 oSlider:拖动滑块或 oProgress:总滑动条或 oProgressUnder:进度条轨道不能为空`)
         }
 
-        if (!(opt.oPlay instanceof Node) || !(opt.oPause instanceof Node) || !(opt.oTotal instanceof Node) || !(opt.oProgressTop instanceof Node)
+        if (!(opt.oTotal instanceof Node) || !(opt.oProgressTop instanceof Node)
             || !(opt.oNowTime instanceof Node) || !(opt.oSlider instanceof Node) || !(opt.oProgress instanceof Node) || !(opt.oProgressUnder instanceof Node)) {
-            throw new Error(`oPlay:播放控件或 oProgressTop: 进度条或 oPause:暂停控件或 oTotal:总时间显示容器或 oNowTime:当前时间显示容器或 oSlider:拖动滑块或 oProgress:总滑动条或 oProgressUnder:进度条轨道必须是dom元素`)
+            throw new Error(`oProgressTop: 进度条或 oTotal:总时间显示容器或 oNowTime:当前时间显示容器或 oSlider:拖动滑块或 oProgress:总滑动条或 oProgressUnder:进度条轨道必须是dom元素`)
         }
 
         if (!(opt.progressBarCallBack && opt.progressBarCallBack instanceof Function)) {
@@ -814,11 +862,6 @@ const MusicControl = (function (doc) {
         _loadBarPlusFunc = _loadBar.bind(opt);
 
         opt.el.addEventListener('timeupdate', _loadBarPlusFunc);
-
-        opt.el.addEventListener('ended', function () {
-            opt.oPlay.classList.add('show');
-            opt.oPause.classList.remove('show');
-        });
 
         opt.el.addEventListener('progress', function () {
             if (this.buffered.length > 0) {
@@ -873,7 +916,7 @@ const MusicControl = (function (doc) {
         this.oProgressTop.classList.add('scale');
         this.el.removeEventListener('timeupdate', _loadBarPlusFunc);
         this.oProgress.removeEventListener('click', _clickProgressFunc);
-        this.oSlider.style.transform = 'translateY(.1rem) scale(1.5)';
+        this.oSlider.style.transform = 'translateY(.1rem) scale(2)';
         if (this.oShowLyrc && this.oShowLyrc instanceof Node) {
             this.oShowLyrc.classList.add('show');
         }
@@ -897,6 +940,7 @@ const MusicControl = (function (doc) {
             }
             _this.oProgressTop.classList.remove('scale');
             _this.oProgress.addEventListener('click', _clickProgressFunc);
+            cancelAnimationFrame(_moveAnId);
         }, 1000);
         _moveing = false;
     }
@@ -922,7 +966,7 @@ const MusicControl = (function (doc) {
 
         doc.addEventListener('mousemove', function (e) {
             if (_moveing) {
-                _change.call(opt, e);
+                _moveAnId = requestAnimationFrame(_change.bind(opt, e));
             }
         });
 
@@ -933,7 +977,7 @@ const MusicControl = (function (doc) {
 
         doc.addEventListener('touchmove', function (e) {
             if (_moveing) {
-                _change.call(opt, e.touches[0]);
+                _moveAnId = requestAnimationFrame(_change.bind(opt, e.touches[0]));
             }
         }, { passive: true });
 

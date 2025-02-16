@@ -25,8 +25,15 @@
             width: 35rem;
             height: 70vh;
             overflow-y: auto;
+            overflow-x: hidden;
             scrollbar-width: none;
             margin: .5rem 0;
+        }
+
+        #lrc b {
+            font-weight: normal;
+            letter-spacing: .06rem;
+            transition: all .1s;
         }
 
         #lrc p:first-child {
@@ -239,6 +246,20 @@
             transition: all .2s;
             user-select: none;
         }
+
+        #changCSS {
+            width: 6rem;
+            font-size: .8rem;
+            line-height: .8rem;
+            height: 2rem;
+            outline: none;
+            border: .1rem solid #fff;
+            background-color: transparent;
+            color: #fff;
+            border-radius: .5rem;
+            padding: .5rem;
+            margin-top: 2rem;
+        }
     </style>
 
     <title>测试用例</title>
@@ -301,6 +322,8 @@
             transform="rotate(-90 32 32)" />
     </svg>
 
+    <button id="changCSS">切换歌词动效</button>
+
 
     <audio src="music/go-beyond.mp3" preload="metadata"></audio>
 
@@ -311,6 +334,7 @@
     <script>
         // 实现控制
         const oPlayBtn = document.querySelector('#playBtn'),
+            oChangeCSS = document.getElementById('changCSS'),
             oShowLyrc = document.querySelector('#showLyrc'),
             oAudio = document.querySelector('audio'),
             oProgressBox = document.querySelector('.progress-box'),
@@ -389,65 +413,83 @@
             lineWidth = 650
         }
 
-        // 初始化逐字歌词
-        LrcOrLyrcKit.init(
-            {
-                el: document.getElementById('lrc'),
-                lyric_data: data.yrc.lyric,
-                tlyric_lyric: data.ytlrc.lyric,
-                func: LrcOrLyrcKit.doYrcLyric,
-                options: {
-                    baseColor: 'rgb(233, 235, 235, .5)',
-                    poshilightColor: 'rgb(233, 235, 235, .5)',
-                    hilightColor: '#fff',
-                    fontSize: '1.2rem',
-                    lineHeight: '1.8rem',
-                    tlyricSize: '1rem',
-                    tlyricLineHeight: '1.6rem',
-                    hilightBgColor: 'rgb(204, 204, 204, .2)',
-                    pMargin: '1rem'
+        const options = {
+            el: document.getElementById('lrc'),
+            lyric_data: data.yrc.lyric,
+            tlyric_lyric: data.ytlrc.lyric,
+            func: LrcOrLyrcKit.doYrcLyric,
+            options: {
+                baseColor: 'rgb(233, 235, 235, .5)',
+                poshilightColor: 'rgb(233, 235, 235, .5)',
+                hilightColor: 'rgb(255,255,255)',
+                fontSize: '1.2rem',
+                lineHeight: '1.8rem',
+                tlyricSize: '1rem',
+                tlyricLineHeight: '1.6rem',
+                hilightBgColor: 'rgb(204, 204, 204, .2)',
+                filter: '.06rem',
+                pMargin: '1rem'
+            },
+            splitLetter: true,
+            letterAnimate: [
+                {
+                    keyframes: `to {
+                                    transform: translateY(-.15rem);
+                                    color: rgb(255,255,255);
+                                }`,
+                    animationFillMode: 'forwards',
+                    animationTimingFunction: 'ease-out',
+                    animationName: 'jump' //必传
+                }
+            ],
+            lineWidth: lineWidth,
+            bindAudio: oAudio,
+            bindPlacePlay: {
+                startPlay: document.getElementById('startPlay'),
+                timeTag: document.querySelector('#startPlay .time'),
+                playTag: document.querySelector('#startPlay svg'),
+                lineDiv: document.querySelector('#startPlay .line'),
+                pcTimer: 1200, // PC端延迟回弹ms
+                mbTimer: 1200, // 移动端延迟回弹ms
+                timeTagTimer: 6000, // 点击播放的样式停留时长ms
+                startMoveCallBack: function () {
+                    this.startPlay.classList.remove('show'); // 隐藏背景
+                    this.playTag.classList.add('show'); // 显示播放图标
+                    this.timeTag.classList.add('show'); // 显示时间
+                    this.lineDiv.classList.add('show'); // 设置基准线显示
                 },
-                lineWidth: lineWidth,
-                bindAudio: oAudio,
-                bindPlacePlay: {
-                    startPlay: document.getElementById('startPlay'),
-                    timeTag: document.querySelector('#startPlay .time'),
-                    playTag: document.querySelector('#startPlay svg'),
-                    lineDiv: document.querySelector('#startPlay .line'),
-                    pcTimer: 1200, // PC端延迟回弹ms
-                    mbTimer: 1200, // 移动端延迟回弹ms
-                    timeTagTimer: 6000, // 点击播放的样式停留时长ms
-                    startMoveCallBack: function () {
-                        this.startPlay.classList.remove('show'); // 隐藏背景
-                        this.playTag.classList.add('show'); // 显示播放图标
-                        this.timeTag.classList.add('show'); // 显示时间
-                        this.lineDiv.classList.add('show'); // 设置基准线显示
-                    },
-                    onMoveCallBack: function () {
-                        this.timeTag.innerText = this.getMusicTime(this.nowLine.target_node.dataset.time); // 设置播放开始时间
-                    },
-                    stopMoveCallBack: function () {
-                        this.lineDiv.classList.remove('show'); // 隐藏基准线
-                        this.startPlay.classList.add('show'); // 显示背景
-                        this.startPlay.style.setProperty('--start-height', `${this.targetRectHeight}px`); // 动态设置高度
-                    },
-                    unMoveCallBack: function () {
-                        this.startPlay.classList.remove('show'); // 隐藏背景
-                        this.playTag.classList.remove('show'); // 隐藏播放按钮
-                        this.timeTag.classList.remove('show'); // 隐藏时间
-                    },
-                    clickCallBack: function () {
-                        oPlay.classList.remove('show');
-                        oPause.classList.add('show');
-                        if (oAudio.paused) {
-                            oAudio.play();
-                        }
+                onMoveCallBack: function () {
+                    this.timeTag.innerText = this.getMusicTime(this.nowLine.target_node.dataset.time); // 设置播放开始时间
+                },
+                stopMoveCallBack: function () {
+                    this.lineDiv.classList.remove('show'); // 隐藏基准线
+                    this.startPlay.classList.add('show'); // 显示背景
+                    this.startPlay.style.setProperty('--start-height', `${this.targetRectHeight}px`); // 动态设置高度
+                },
+                unMoveCallBack: function () {
+                    this.startPlay.classList.remove('show'); // 隐藏背景
+                    this.playTag.classList.remove('show'); // 隐藏播放按钮
+                    this.timeTag.classList.remove('show'); // 隐藏时间
+                },
+                clickCallBack: function () {
+                    oPlay.classList.remove('show');
+                    oPause.classList.add('show');
+                    if (oAudio.paused) {
+                        oAudio.play();
                     }
                 }
             }
-        );
+        }
+
+        // 初始化逐字歌词
         // 显示或隐藏翻译，默认显示
         // LrcOrLyrcKit.translation();
+
+        LrcOrLyrcKit.init(options);
+
+        oChangeCSS.addEventListener('click', function () {
+            LrcOrLyrcKit.changeAnimation();
+        });
 
         // 绑定控件
         oPlayBtn.addEventListener('click', function () {
@@ -459,6 +501,22 @@
                 oAudio.pause();
             }
         });
+        oAudio.addEventListener('ended', function () {
+            oPlay.classList.add('show');
+            oPause.classList.remove('show');
+        });
+
+        oAudio.addEventListener('pause', function () {
+            oPlay.classList.add('show');
+            oPause.classList.remove('show');
+        });
+
+        oAudio.addEventListener('play', function () {
+            oPlay.classList.remove('show');
+            oPause.classList.add('show');
+        });
+
+
         MusicControl.init({
             el: oAudio,
             oPlay: oPlay,
