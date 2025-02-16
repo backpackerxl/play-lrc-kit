@@ -354,8 +354,8 @@ const LrcOrLyrcKit = (function (win, doc) {
             throw new Error("el不存在");
         }
 
-        if (!(opt.el instanceof Audio)) {
-            throw new Error('el不是一个html播放器');
+        if (!(opt.el instanceof HTMLAudioElement)) {
+            throw new Error('el不是一个html Audio播放器');
         }
 
         _audio = opt.el;
@@ -820,168 +820,170 @@ const LrcOrLyrcKit = (function (win, doc) {
  * @author: backpackerxl 2025/2/15
  * @description: 这是音乐播放器控件控制工具
  */
-const MusicControl = (function (doc) {
+const MusicControl = (function (win, doc) {
     let _loadBarPlusFunc = null,
         _clickProgressFunc = null,
-        _bound = null,
         _moveAnId = null,
         _cNow = 0,
-        _moveing = false,
+        _width = 0,
         _showLyrc = 0;
 
     function _init(opt) {
-
-        if (!opt.el) {
-            throw new Error("el不存在");
+        if (!opt.oProgressTop || !opt.oSlider || !opt.oProgress || !opt.oProgressUnder) {
+            throw new Error(`oProgressTop: 进度条或 oSlider:拖动滑块或 oProgress:总滑动条或 oProgressUnder:进度条轨道不能为空`);
         }
 
-        if (!(opt.el instanceof Audio)) {
-            throw new Error('el不是一个html播放器');
+        if (!(opt.oProgressTop instanceof Node) || !(opt.oSlider instanceof Node) || !(opt.oProgress instanceof Node) || !(opt.oProgressUnder instanceof Node)) {
+            throw new Error(`oProgressTop: 进度条或 oSlider:拖动滑块或 oProgress:总滑动条或 oProgressUnder:进度条轨道必须是dom元素`);
         }
 
-        if (!opt.oTotal || !opt.oProgressTop || !opt.oNowTime || !opt.oSlider || !opt.oProgress || !opt.oProgressUnder) {
-            throw new Error(`oProgressTop: 进度条或 oTotal:总时间显示容器或 oNowTime:当前时间显示容器或 oSlider:拖动滑块或 oProgress:总滑动条或 oProgressUnder:进度条轨道不能为空`)
+        if (!(opt.progressBarCallBack instanceof Function)) {
+            throw new Error(`progressBarCallBack: ${opt.progressBarCallBack}不是个函数`);
         }
 
-        if (!(opt.oTotal instanceof Node) || !(opt.oProgressTop instanceof Node)
-            || !(opt.oNowTime instanceof Node) || !(opt.oSlider instanceof Node) || !(opt.oProgress instanceof Node) || !(opt.oProgressUnder instanceof Node)) {
-            throw new Error(`oProgressTop: 进度条或 oTotal:总时间显示容器或 oNowTime:当前时间显示容器或 oSlider:拖动滑块或 oProgress:总滑动条或 oProgressUnder:进度条轨道必须是dom元素`)
-        }
+        opt._bound = opt.oProgress.getBoundingClientRect();
 
-        if (!(opt.progressBarCallBack && opt.progressBarCallBack instanceof Function)) {
-            console.warn('设置的自定义进度条失败，自定义进度条将不会跟随音乐变化！！');
-        }
+        opt._moveing = false;
 
-        // 音频播放联动
-        opt.el.addEventListener('loadedmetadata', function () {
-            opt.oTotal.innerText = LrcOrLyrcKit.getMusicTime(opt.el.duration);
-            opt.oProgressTop.style.width = '0%';
-            opt.progressBarCallBack && opt.progressBarCallBack();
-        });
+        if (opt.el instanceof HTMLAudioElement || opt.el instanceof HTMLVideoElement) {
+            // 音频播放联动
+            opt.el.addEventListener('loadedmetadata', function () {
+                opt.oTotal.innerText = LrcOrLyrcKit.getMusicTime(opt.el.duration);
+                opt.oProgressTop.style.width = '0%';
+                opt.progressBarCallBack && opt.progressBarCallBack(0);
+            });
 
-        _loadBarPlusFunc = _loadBar.bind(opt);
+            _loadBarPlusFunc = _loadBar.bind(win, opt);
 
-        opt.el.addEventListener('timeupdate', _loadBarPlusFunc);
+            opt.el.addEventListener('timeupdate', _loadBarPlusFunc);
 
-        opt.el.addEventListener('progress', function () {
-            if (this.buffered.length > 0) {
-                // 获取最后一个缓冲范围的结束时间
-                const bufferedEnd = this.buffered.end(this.buffered.length - 1);
-                // 计算加载进度百分比
-                const progress = (bufferedEnd / this.duration) * 100;
-                // 更新进度条宽度
-                if (opt.oProgressMid) {
-                    opt.oProgressMid.style.width = `${progress}%`;
+            opt.el.addEventListener('progress', function () {
+                if (opt.el.buffered.length > 0) {
+                    // 获取最后一个缓冲范围的结束时间
+                    const bufferedEnd = opt.el.buffered.end(opt.el.buffered.length - 1);
+                    // 计算加载进度百分比
+                    const progress = (bufferedEnd / opt.el.duration) * 100;
+                    // 更新进度条宽度
+                    if (opt.oProgressMid) {
+                        opt.oProgressMid.style.width = `${progress}%`;
+                    }
                 }
-            }
-        });
+            });
+        }
 
-        _bound = opt.oProgress.getBoundingClientRect();
+
 
         _bindProgressBar(opt);
     }
 
-    function _loadBar() {
-        _cNow = this.el.currentTime;
-        const progress = (this.el.currentTime / this.el.duration) * 100;
-        this.oProgressTop.style.width = `${progress}%`;
-        this.oNowTime.innerText = LrcOrLyrcKit.getMusicTime(this.el.currentTime);
-        this.progressBarCallBack && this.progressBarCallBack();
+    function _loadBar(opt) {
+        _cNow = opt.el.currentTime;
+        const progress = (opt.el.currentTime / opt.el.duration) * 100;
+        opt.oProgressTop.style.width = `${progress}%`;
+        if (opt.el && (opt.el instanceof HTMLAudioElement || opt.el instanceof HTMLVideoElement)) {
+            opt.oNowTime.innerText = LrcOrLyrcKit.getMusicTime(opt.el.currentTime);
+        }
+        opt.progressBarCallBack && opt.progressBarCallBack((_cNow / opt.el.duration).toFixed(4));
     }
 
-    function _change(e) {
-        let width = e.clientX - _bound.left;
-        if (width < 0) {
-            width = 0;
-        } else if (width > _bound.width) {
-            width = _bound.width;
+    function _change(opt, e) {
+        console.log(this)
+        _width = e.clientX - opt._bound.left;
+        if (_width < 0) {
+            _width = 0;
+        } else if (_width > opt._bound.width) {
+            _width = opt._bound.width;
         }
-        this.oProgressTop.style.width = width + 'px';
-        _cNow = this.el.duration * (width / _bound.width);
-        this.oNowTime.innerText = LrcOrLyrcKit.getMusicTime(_cNow);
-        if (this.oShowLyrc && this.oShowLyrc instanceof Node) {
-            LrcOrLyrcKit.showThumLryc(_cNow, this.oShowLyrc, 'highlight');
+        opt.oProgressTop.style.width = _width + 'px';
+        if (opt.el && (opt.el instanceof HTMLAudioElement || opt.el instanceof HTMLVideoElement)) {
+            _cNow = opt.el.duration * (_width / opt._bound.width);
+            opt.oNowTime.innerText = LrcOrLyrcKit.getMusicTime(_cNow);
+        }
+        if (opt.oShowLyrc && opt.oShowLyrc instanceof HTMLElement) {
+            LrcOrLyrcKit.showThumLryc(_cNow, opt.oShowLyrc, 'highlight');
         }
     }
 
-    function _startMove() {
-        _moveing = true;
+    function _startMove(opt) {
+        opt._moveing = true;
         if (_showLyrc) {
             clearTimeout(_showLyrc);
         }
-        this.oProgressUnder.classList.add('scale');
-        if (this.oProgressMid) {
-            this.oProgressMid.classList.add('scale');
+        opt.oProgressUnder.classList.add('scale');
+        if (opt.oProgressMid) {
+            opt.oProgressMid.classList.add('scale');
         }
-        this.oProgressTop.classList.add('scale');
-        this.el.removeEventListener('timeupdate', _loadBarPlusFunc);
-        this.oProgress.removeEventListener('click', _clickProgressFunc);
-        this.oSlider.style.transform = 'translateY(.1rem) scale(2)';
-        if (this.oShowLyrc && this.oShowLyrc instanceof Node) {
-            this.oShowLyrc.classList.add('show');
+        opt.oProgressTop.classList.add('scale');
+        if (opt.el && (opt.el instanceof HTMLAudioElement || opt.el instanceof HTMLVideoElement)) {
+            opt.el.removeEventListener('timeupdate', _loadBarPlusFunc);
+        }
+        opt.oProgress.removeEventListener('click', _clickProgressFunc);
+        opt.oSlider.style.transform = 'translateY(.1rem) scale(2)';
+        if (opt.oShowLyrc && opt.oShowLyrc instanceof HTMLElement) {
+            opt.oShowLyrc.classList.add('show');
         }
     }
 
-    function _stopMove() {
-        if (!Number.isNaN(_cNow) && _moveing) {
-            LrcOrLyrcKit.toCurrentLyrc(_cNow);
-            this.el.addEventListener('timeupdate', _loadBarPlusFunc);
-            this.progressBarCallBack && this.progressBarCallBack();
+    function _stopMove(opt) {
+        if (!Number.isNaN(_cNow) && opt._moveing) {
+            if (opt.el && (opt.el instanceof HTMLAudioElement || opt.el instanceof HTMLVideoElement)) {
+                LrcOrLyrcKit.toCurrentLyrc(_cNow);
+                opt.el.addEventListener('timeupdate', _loadBarPlusFunc);
+            }
+            opt.progressBarCallBack && opt.progressBarCallBack((_width / opt._bound.width).toFixed(4));
         }
-        _this = this;
         _showLyrc = setTimeout(function () {
-            if (_this.oShowLyrc && _this.oShowLyrc instanceof Node) {
-                _this.oShowLyrc.classList.remove('show');
+            console.log(this)
+            if (opt.oShowLyrc && opt.oShowLyrc instanceof HTMLElement) {
+                opt.oShowLyrc.classList.remove('show');
             }
-            _this.oSlider.style = '';
-            _this.oProgressUnder.classList.remove('scale');
-            if (_this.oProgressMid) {
-                _this.oProgressMid.classList.remove('scale');
+            opt.oSlider.style = '';
+            opt.oProgressUnder.classList.remove('scale');
+            if (opt.oProgressMid) {
+                opt.oProgressMid.classList.remove('scale');
             }
-            _this.oProgressTop.classList.remove('scale');
-            _this.oProgress.addEventListener('click', _clickProgressFunc);
+            opt.oProgressTop.classList.remove('scale');
+            opt.oProgress.addEventListener('click', _clickProgressFunc);
             cancelAnimationFrame(_moveAnId);
         }, 1000);
-        _moveing = false;
+        opt._moveing = false;
     }
 
-    function _clickProgress(e) {
-        _change.call(this, e);
-        LrcOrLyrcKit.toCurrentLyrc(_cNow);
-        this.progressBarCallBack && this.progressBarCallBack();
+    function _clickProgress(opt, e) {
+        _change.call(win, opt, e);
+        if (opt.el && (opt.el instanceof HTMLAudioElement || opt.el instanceof HTMLVideoElement)) {
+            LrcOrLyrcKit.toCurrentLyrc(_cNow);
+        }
+        opt.progressBarCallBack && opt.progressBarCallBack((_width / opt._bound.width).toFixed(4));
     }
 
 
     function _bindProgressBar(opt) {
-        if (!opt.oShowLyrc || !(opt.oShowLyrc instanceof Node)) {
-            console.warn('歌词拖动提示不能显示，因为没有配置提示容器！！！')
-        }
-
-        _clickProgressFunc = _clickProgress.bind(opt);
+        _clickProgressFunc = _clickProgress.bind(win, opt);
 
         //处理点击事件
         opt.oProgress.addEventListener('click', _clickProgressFunc);
 
-        opt.oSlider.addEventListener('mousedown', _startMove.bind(opt));
+        opt.oSlider.addEventListener('mousedown', _startMove.bind(win, opt));
 
         doc.addEventListener('mousemove', function (e) {
-            if (_moveing) {
-                _moveAnId = requestAnimationFrame(_change.bind(opt, e));
+            if (opt._moveing) {
+                _moveAnId = requestAnimationFrame(_change.bind(win, opt, e));
             }
         });
 
-        doc.addEventListener("mouseup", _stopMove.bind(opt));
+        doc.addEventListener("mouseup", _stopMove.bind(win, opt));
 
         // 处理移动端进度条的拖动
-        opt.oSlider.addEventListener('touchstart', _startMove.bind(opt), { passive: true });
+        opt.oSlider.addEventListener('touchstart', _startMove.bind(win, opt), { passive: true });
 
         doc.addEventListener('touchmove', function (e) {
-            if (_moveing) {
-                _moveAnId = requestAnimationFrame(_change.bind(opt, e.touches[0]));
+            if (opt._moveing) {
+                _moveAnId = requestAnimationFrame(_change.bind(win, opt, e.touches[0]));
             }
         }, { passive: true });
 
-        doc.addEventListener('touchend', _stopMove.bind(opt), { passive: true });
+        doc.addEventListener('touchend', _stopMove.bind(win, opt), { passive: true });
     }
 
     return {
@@ -989,4 +991,4 @@ const MusicControl = (function (doc) {
             _init(opt);
         }
     }
-})(document);
+})(window, document);
