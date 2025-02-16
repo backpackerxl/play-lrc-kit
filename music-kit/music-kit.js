@@ -821,9 +821,7 @@ const LrcOrLyrcKit = (function (win, doc) {
  * @description: 这是音乐播放器控件控制工具
  */
 const MusicControl = (function (win, doc) {
-    let _loadBarPlusFunc = null,
-        _clickProgressFunc = null,
-        _moveAnId = null,
+    let _moveAnId = null,
         _cNow = 0,
         _width = 0,
         _showLyrc = 0;
@@ -853,9 +851,9 @@ const MusicControl = (function (win, doc) {
                 opt.progressBarCallBack && opt.progressBarCallBack(0);
             });
 
-            _loadBarPlusFunc = _loadBar.bind(win, opt);
+            opt._loadBarPlusFunc = _loadBar.bind(win, opt);
 
-            opt.el.addEventListener('timeupdate', _loadBarPlusFunc);
+            opt.el.addEventListener('timeupdate', opt._loadBarPlusFunc);
 
             opt.el.addEventListener('progress', function () {
                 if (opt.el.buffered.length > 0) {
@@ -887,7 +885,6 @@ const MusicControl = (function (win, doc) {
     }
 
     function _change(opt, e) {
-        console.log(this)
         _width = e.clientX - opt._bound.left;
         if (_width < 0) {
             _width = 0;
@@ -915,9 +912,9 @@ const MusicControl = (function (win, doc) {
         }
         opt.oProgressTop.classList.add('scale');
         if (opt.el && (opt.el instanceof HTMLAudioElement || opt.el instanceof HTMLVideoElement)) {
-            opt.el.removeEventListener('timeupdate', _loadBarPlusFunc);
+            opt.el.removeEventListener('timeupdate', opt._loadBarPlusFunc);
         }
-        opt.oProgress.removeEventListener('click', _clickProgressFunc);
+        opt.oProgress.removeEventListener('click', opt._clickProgressFunc);
         opt.oSlider.style.transform = 'translateY(.1rem) scale(2)';
         if (opt.oShowLyrc && opt.oShowLyrc instanceof HTMLElement) {
             opt.oShowLyrc.classList.add('show');
@@ -928,12 +925,11 @@ const MusicControl = (function (win, doc) {
         if (!Number.isNaN(_cNow) && opt._moveing) {
             if (opt.el && (opt.el instanceof HTMLAudioElement || opt.el instanceof HTMLVideoElement)) {
                 LrcOrLyrcKit.toCurrentLyrc(_cNow);
-                opt.el.addEventListener('timeupdate', _loadBarPlusFunc);
+                opt.el.addEventListener('timeupdate', opt._loadBarPlusFunc);
             }
             opt.progressBarCallBack && opt.progressBarCallBack((_width / opt._bound.width).toFixed(4));
         }
         _showLyrc = setTimeout(function () {
-            console.log(this)
             if (opt.oShowLyrc && opt.oShowLyrc instanceof HTMLElement) {
                 opt.oShowLyrc.classList.remove('show');
             }
@@ -943,7 +939,7 @@ const MusicControl = (function (win, doc) {
                 opt.oProgressMid.classList.remove('scale');
             }
             opt.oProgressTop.classList.remove('scale');
-            opt.oProgress.addEventListener('click', _clickProgressFunc);
+            opt.oProgress.addEventListener('click', opt._clickProgressFunc);
             cancelAnimationFrame(_moveAnId);
         }, 1000);
         opt._moveing = false;
@@ -959,10 +955,10 @@ const MusicControl = (function (win, doc) {
 
 
     function _bindProgressBar(opt) {
-        _clickProgressFunc = _clickProgress.bind(win, opt);
+        opt._clickProgressFunc = _clickProgress.bind(win, opt);
 
         //处理点击事件
-        opt.oProgress.addEventListener('click', _clickProgressFunc);
+        opt.oProgress.addEventListener('click', opt._clickProgressFunc);
 
         opt.oSlider.addEventListener('mousedown', _startMove.bind(win, opt));
 

@@ -575,7 +575,14 @@
             oProgressUnder: oProgressUnderVolume,
             oProgressTop: oProgressTopVolume,
             progressBarCallBack: function (progress) {
-                console.log(progress);
+                oAudio.volume = Math.floor(progress * 10) / 10;
+                if (oAudio.volume === 0) {
+                    oSliderVolumeVol.classList.remove('show');
+                    oSliderVolumeNoVol.classList.add('show');
+                } else {
+                    oSliderVolumeVol.classList.add('show');
+                    oSliderVolumeNoVol.classList.remove('show');
+                }
             }
         });
 
@@ -592,9 +599,9 @@
             oProgressUnder: oProgressUnder,
             oProgressTop: oProgressTop,
             oShowLyrc: oShowLyrc,
-            progressBarCallBack: function () {
-                if (oAudio.currentTime > 0) {
-                    oCircle.style.strokeDashoffset = oCLen - (oAudio.currentTime / oAudio.duration) * oCLen;
+            progressBarCallBack: function (progress) {
+                if (Math.floor(progress * 100) !== 0) {
+                    oCircle.style.strokeDashoffset = oCLen - progress * oCLen;
                 } else {
                     oCircle.style.strokeDashoffset = oCLen + 1;
                 }
