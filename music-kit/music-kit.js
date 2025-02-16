@@ -774,6 +774,12 @@ const LrcOrLyrcKit = (function (win, doc) {
  * @description: 这是音乐播放器控件控制工具
  */
 const MusicControl = (function (doc) {
+    let _loadBarPlusFunc = null,
+        _clickProgressFunc = null,
+        _bound = null,
+        _cNow = 0,
+        _moveing = false,
+        _showLyrc = 0;
 
     function _init(opt) {
 
@@ -805,7 +811,9 @@ const MusicControl = (function (doc) {
             opt.progressBarCallBack && opt.progressBarCallBack();
         });
 
-        opt.el.addEventListener('timeupdate', _loadBar.bind(opt));
+        _loadBarPlusFunc = _loadBar.bind(opt);
+
+        opt.el.addEventListener('timeupdate', _loadBarPlusFunc);
 
         opt.el.addEventListener('ended', function () {
             opt.oPlay.classList.add('show');
@@ -825,13 +833,10 @@ const MusicControl = (function (doc) {
             }
         });
 
+        _bound = opt.oProgress.getBoundingClientRect();
+
         _bindProgressBar(opt);
     }
-
-    let _cNow = 0,
-        _moveing = false,
-        _showLyrc = 0;
-
 
     function _loadBar() {
         _cNow = this.el.currentTime;
@@ -841,15 +846,15 @@ const MusicControl = (function (doc) {
         this.progressBarCallBack && this.progressBarCallBack();
     }
 
-    function _change(e, totalWidth, bound) {
-        let width = e.clientX - bound.left;
+    function _change(e) {
+        let width = e.clientX - _bound.left;
         if (width < 0) {
             width = 0;
-        } else if (width > totalWidth) {
-            width = totalWidth;
+        } else if (width > _bound.width) {
+            width = _bound.width;
         }
         this.oProgressTop.style.width = width + 'px';
-        _cNow = this.el.duration * (width / bound.width);
+        _cNow = this.el.duration * (width / _bound.width);
         this.oNowTime.innerText = LrcOrLyrcKit.getMusicTime(_cNow);
         if (this.oShowLyrc && this.oShowLyrc instanceof Node) {
             LrcOrLyrcKit.showThumLryc(_cNow, this.oShowLyrc, 'highlight');
@@ -866,7 +871,8 @@ const MusicControl = (function (doc) {
             this.oProgressMid.classList.add('scale');
         }
         this.oProgressTop.classList.add('scale');
-        this.el.removeEventListener('timeupdate', _loadBar.bind(this));
+        this.el.removeEventListener('timeupdate', _loadBarPlusFunc);
+        this.oProgress.removeEventListener('click', _clickProgressFunc);
         this.oSlider.style.transform = 'translateY(.1rem) scale(1.5)';
         if (this.oShowLyrc && this.oShowLyrc instanceof Node) {
             this.oShowLyrc.classList.add('show');
@@ -875,11 +881,10 @@ const MusicControl = (function (doc) {
 
     function _stopMove() {
         if (!Number.isNaN(_cNow) && _moveing) {
-            this.el.currentTime = _cNow;
             LrcOrLyrcKit.toCurrentLyrc(_cNow);
+            this.el.addEventListener('timeupdate', _loadBarPlusFunc);
             this.progressBarCallBack && this.progressBarCallBack();
         }
-        this.el.addEventListener('timeupdate', _loadBar.bind(this));
         _this = this;
         _showLyrc = setTimeout(function () {
             if (_this.oShowLyrc && _this.oShowLyrc instanceof Node) {
@@ -891,8 +896,15 @@ const MusicControl = (function (doc) {
                 _this.oProgressMid.classList.remove('scale');
             }
             _this.oProgressTop.classList.remove('scale');
+            _this.oProgress.addEventListener('click', _clickProgressFunc);
         }, 1000);
         _moveing = false;
+    }
+
+    function _clickProgress(e) {
+        _change.call(this, e);
+        LrcOrLyrcKit.toCurrentLyrc(_cNow);
+        this.progressBarCallBack && this.progressBarCallBack();
     }
 
 
@@ -901,21 +913,16 @@ const MusicControl = (function (doc) {
             console.warn('歌词拖动提示不能显示，因为没有配置提示容器！！！')
         }
 
-        const totalWidth = opt.oProgress.getBoundingClientRect().width,
-            bound = opt.oProgress.getBoundingClientRect();
+        _clickProgressFunc = _clickProgress.bind(opt);
+
         //处理点击事件
-        opt.oProgress.addEventListener('click', function (e) {
-            _change.call(opt, e, totalWidth, bound);
-            LrcOrLyrcKit.toCurrentLyrc(_cNow);
-            opt.progressBarCallBack && opt.progressBarCallBack();
-            opt.el.removeEventListener('timeupdate', _loadBar.bind(opt));
-        });
+        opt.oProgress.addEventListener('click', _clickProgressFunc);
 
         opt.oSlider.addEventListener('mousedown', _startMove.bind(opt));
 
         doc.addEventListener('mousemove', function (e) {
             if (_moveing) {
-                _change.call(opt, e, totalWidth, bound);
+                _change.call(opt, e);
             }
         });
 
@@ -926,7 +933,7 @@ const MusicControl = (function (doc) {
 
         doc.addEventListener('touchmove', function (e) {
             if (_moveing) {
-                _change.call(opt, e.touches[0], totalWidth, bound);
+                _change.call(opt, e.touches[0]);
             }
         }, { passive: true });
 
