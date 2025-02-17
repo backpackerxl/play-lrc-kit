@@ -1,0 +1,19 @@
+{
+  "compress": {
+    "collapse_vars": true,
+    "drop_console": true,
+    "dead_code": true
+  },
+  "mangle": {
+    "toplevel": true,
+    "reserved": [
+      "e",
+      "LrcOrLyrcKit",
+      "MusicControl"
+    ]
+  },
+  "output": {
+    "preamble": "/**\n * @author: backpackerxl 2025/2/17\n * @description: 这是一个歌词渲染工具&音乐播放器控件控制工具\n**/",
+    "comments": false
+  }
+}

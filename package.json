@@ -1,0 +1,26 @@
+{
+  "name": "play-lrc-kit",
+  "version": "1.0.0",
+  "description": "它是一个带歌词联动效果和自定义播放进度的开发工具",
+  "main": "music-kit.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "build": "terser music-kit/music-kit.js --config-file terser.config.json -o dist/music-kit.min.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/backpackerxl/play-lrc-kit.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/backpackerxl/play-lrc-kit/issues"
+  },
+  "homepage": "https://github.com/backpackerxl/play-lrc-kit#readme",
+  "devDependencies": {
+    "terser": "^5.39.0"
+  }
+}
