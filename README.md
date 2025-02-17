@@ -3,7 +3,7 @@
 #### js使用方式
 - 引入js代码
 ```javascript
-<script src="https://backpackerxl.netlify.app/music-kit/music-kit.min.js"></script>
+<script src="https://backpackerxl.netlify.app/dist/music-kit.min.js"></script>
 ```
 - 使用示例
 ```javascript
