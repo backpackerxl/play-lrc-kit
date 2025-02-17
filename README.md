@@ -1,5 +1,5 @@
 #### 这是一个音乐播放器工具
-- [CodePen 在线示例](https://codepen.io/backpackerxl/full/RNwPBqj)
+- <img height="25" src="https://cpwebassets.codepen.io/assets/favicon/favicon-aec34940fbc1a6e787974dcd360f2c6b63348d4b1f4e06c77743096d55480f33.ico" width="25" />[CodePen 在线示例](https://codepen.io/backpackerxl/full/RNwPBqj)
 - 他可以帮你快速构建一个带歌词联动效果和自定义播放进度的开发工具，只需要简单的配置就可实现负载歌词同步，支持单个歌词动效和单行歌词动效等联动，点击歌词跳转播放等功能，支持原生播放控件的点击进度条播放、拖拽进度条播放等功能。
 #### js使用方式
 - 引入js代码
