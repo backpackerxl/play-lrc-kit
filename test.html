@@ -508,6 +508,9 @@
             },
             onMoveCallBack: function () {
                 this.timeTag.innerText = this.getMusicTime(this.nowLine.target_node.dataset.time); // 设置播放开始时间
+                if(navigator.vibrate) {
+                    navigator.vibrate(16);
+                }
             },
             stopMoveCallBack: function () {
                 this.lineDiv.classList.remove('show'); // 隐藏基准线
@@ -539,6 +542,7 @@
         oProgress: oProgressVolume,
         oProgressUnder: oProgressUnderVolume,
         oProgressTop: oProgressTopVolume,
+        vibrate: 15,
         progressBarCallBack: function (progress) {
             if (progress < 0.1 && progress > 0.009) {
                 oAudio.volume = Math.ceil(progress * 10) / 10;
@@ -568,6 +572,7 @@
         oProgressUnder: oProgressUnder,
         oProgressTop: oProgressTop,
         oShowLyrc: oShowLyrc,
+        vibrate: 15, // 开启震动
         progressBarCallBack: function (progress) {
             if (Math.floor(progress * 100) !== 0) {
                 oCircle.style.strokeDashoffset = oCLen - progress * oCLen;
@@ -580,17 +585,26 @@
     oTranslation.addEventListener('click', function () {
         // 显示或隐藏翻译，默认显示
         LrcOrLyrcKit.translation();
+        if(navigator.vibrate){
+            navigator.vibrate(10);
+        }
     });
 
     oChangeCSS.addEventListener('click', function () {
         // 切换歌词动效
         LrcOrLyrcKit.changeAnimation();
+        if(navigator.vibrate){
+            navigator.vibrate(10);
+        }
     });
 
     // 绑定控件常规事件
     oPlayBtn.addEventListener('click', function () {
         oPlay.classList.toggle('show');
         oPause.classList.toggle('show');
+        if(navigator.vibrate){
+            navigator.vibrate(10);
+        }
         if (oAudio.paused) {
             oAudio.play();
         } else {

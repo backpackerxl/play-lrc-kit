@@ -927,6 +927,11 @@ const MusicControl = (function (win, doc) {
                 LrcOrLyrcKit.toCurrentLyrc(_cNow);
                 opt.el.addEventListener('timeupdate', opt._loadBarPlusFunc);
             }
+            if(opt.vibrate && (_width === 0 || _width === opt._bound.width)){
+                if(navigator.vibrate){
+                    navigator.vibrate(opt.vibrate);
+                }
+            }
             opt.progressBarCallBack && opt.progressBarCallBack((_width / opt._bound.width).toFixed(4));
         }
         _showLyrc = setTimeout(function () {
@@ -947,6 +952,11 @@ const MusicControl = (function (win, doc) {
 
     function _clickProgress(opt, e) {
         _change.call(win, opt, e);
+        if(opt.vibrate){
+            if(navigator.vibrate){
+                navigator.vibrate(opt.vibrate);
+            }
+        }
         if (opt.el && (opt.el instanceof HTMLAudioElement || opt.el instanceof HTMLVideoElement)) {
             LrcOrLyrcKit.toCurrentLyrc(_cNow);
         }
