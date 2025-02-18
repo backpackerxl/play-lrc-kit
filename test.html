@@ -458,6 +458,8 @@
         };
     }
 
+    let clickTrige = false;
+
     console.log(LrcOrLyrcKit);
 
     const data = getMusicData();
@@ -516,7 +518,7 @@
             },
             onMoveCallBack: function () {
                 this.timeTag.innerText = this.getMusicTime(this.nowLine.target_node.dataset.time); // 设置播放开始时间
-                if(navigator.vibrate) {
+                if(navigator.vibrate && clickTrige) {
                     navigator.vibrate(16);
                 }
             },
@@ -608,6 +610,7 @@
 
     // 绑定控件常规事件
     oPlayBtn.addEventListener('click', function () {
+        clickTrige = true;
         oPlay.classList.toggle('show');
         oPause.classList.toggle('show');
         if(navigator.vibrate){

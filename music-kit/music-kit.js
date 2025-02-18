@@ -382,7 +382,7 @@ const LrcOrLyrcKit = (function (win, doc) {
 
     // 执行移动动画
     function _timerMove() {
-        _oldNode = _moveLyrc(_audio.currentTime, _oldNode);
+        _moveLyrc(_audio.currentTime);
         _animationId = requestAnimationFrame(_timerMove)
     }
 
@@ -392,7 +392,7 @@ const LrcOrLyrcKit = (function (win, doc) {
      * @param oldNode 初始节点
      * @private
      */
-    function _moveLyrc(currentTime, oldNode) {
+    function _moveLyrc(currentTime) {
         let targetNode = null;
         // 查找高亮目标节点
         for (let i = 0; i < _lrcNodeArr.length; i++) {
@@ -407,12 +407,12 @@ const LrcOrLyrcKit = (function (win, doc) {
             }
         }
 
-        if (targetNode && oldNode !== targetNode) {
+        if (targetNode && _oldNode !== targetNode) {
             const span_arr = targetNode.span_arr;
             // 清除高亮样式
-            if (oldNode) {
-                oldNode.target_node.className = '';
-                oldNode.span_arr.forEach(el => {
+            if (_oldNode) {
+                _oldNode.target_node.className = '';
+                _oldNode.span_arr.forEach(el => {
                     el.span.className = '';
                     el.span.style = '';
                 });
@@ -424,13 +424,13 @@ const LrcOrLyrcKit = (function (win, doc) {
                 targetNode.target_node.classList.add('color');
             }
             // 更新oldNode
-            oldNode = targetNode;
+            _oldNode = targetNode;
             if (_moveTag) {
                 // 处理歌词滚动
                 if (_startPlay) {
                     _startPlay.classList.remove(_showTag);
                 }
-                _lrcMove(300, oldNode.target_node);
+                _lrcMove(300, _oldNode.target_node);
             }
         } else if (targetNode) {
             // 歌词逐字高亮文字动效
@@ -438,44 +438,52 @@ const LrcOrLyrcKit = (function (win, doc) {
             if (span_arr.length > 0) {
                 span_arr.forEach(el => {
                     if (el.stm <= currentTime && el.span.classList.length === 0) {
+                        console.log(el.stm, currentTime.toFixed(2));
                         el.span.classList.add('now');
                         if (_normalCSS) {
-                            if (_normal) {
-                                _animateProgress(el.span, 0);
-                            } else {
-                                _animateProgress(el.span, el.duration);
-                            }
+                            // if (_normal) {
+                                // _animateProgress(el.span, 0);
+                            // } else {
+                                _animateProgress(el.span, el.stm, el.duration);
+                            // }
                         }
                     }
                 });
             }
         }
-        return oldNode;
     }
 
 
     /**
      * 计算progress并设置Property
      **/
-    function _animateProgress(el, duration) {
+    function _animateProgress(el, stm, duration) {
         let num = 0;
         let frameDuration = 16.67; // 每帧时长 16.67ms
 
-        const totalFrames = duration / frameDuration; // 总帧数
-        let currentFrame = 0; // 当前帧数
+        // const totalFrames = duration / frameDuration; // 总帧数
+        const totalFrames = stm + duration; // 总帧数
+        // let currentFrame = 0; // 当前帧数
         // 设置动画参数--progress
-        function animate() {
-            if (currentFrame < totalFrames) {
-                num = Math.floor((currentFrame / totalFrames) * 100);
+        // requestAnimationFrame(function(){
+            do {
+                num = Math.floor((stm / totalFrames) * 100);
                 el.style.setProperty(`--${_lrcContainer.id}-progress`, num * 0.01);
-                currentFrame++;
-                requestAnimationFrame(animate);
-            } else {
-                el.style.setProperty(`--${_lrcContainer.id}-progress`, 1);
-            }
-        }
+                stm++;
+            } while(stm < totalFrames);
+        // })
+        // function animate() {
+        //     if (stm < totalFrames) {
+        //         num = Math.floor((stm / totalFrames) * 100);
+        //         el.style.setProperty(`--${_lrcContainer.id}-progress`, num * 0.01);
+        //         stm++;
+        //         requestAnimationFrame(animate);
+        //     } else {
+        //         el.style.setProperty(`--${_lrcContainer.id}-progress`, 1);
+        //     }
+        // }
 
-        requestAnimationFrame(animate);
+        // requestAnimationFrame(animate);
     }
 
     /**
@@ -638,6 +646,11 @@ const LrcOrLyrcKit = (function (win, doc) {
             cancelAnimationFrame(animateId); // 取消动画
             _unMoveCallBack && _unMoveCallBack(); // 卸载参照物
             _moveTag = true;
+            _smoothScroll(
+                _lrcContainer,
+                _targetY,
+                100
+            );
         }
 
         // 监听鼠标滚轮事件，实现定点播放
