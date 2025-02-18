@@ -907,6 +907,8 @@ const MusicControl = (function (win, doc) {
             clearTimeout(_showLyrc);
         }
         opt.oProgressUnder.classList.add('scale');
+        opt.oSlider.classList.add('dragging');
+        opt.oProgress.classList.add('dragging');
         if (opt.oProgressMid) {
             opt.oProgressMid.classList.add('scale');
         }
@@ -927,13 +929,15 @@ const MusicControl = (function (win, doc) {
                 LrcOrLyrcKit.toCurrentLyrc(_cNow);
                 opt.el.addEventListener('timeupdate', opt._loadBarPlusFunc);
             }
-            if(opt.vibrate && (_width === 0 || _width === opt._bound.width)){
-                if(navigator.vibrate){
+            if (opt.vibrate && (_width === 0 || _width === opt._bound.width)) {
+                if (navigator.vibrate) {
                     navigator.vibrate(opt.vibrate);
                 }
             }
             opt.progressBarCallBack && opt.progressBarCallBack((_width / opt._bound.width).toFixed(4));
         }
+        opt.oSlider.classList.remove('dragging');
+        opt.oProgress.classList.remove('dragging');
         _showLyrc = setTimeout(function () {
             if (opt.oShowLyrc && opt.oShowLyrc instanceof HTMLElement) {
                 opt.oShowLyrc.classList.remove('show');
@@ -952,8 +956,8 @@ const MusicControl = (function (win, doc) {
 
     function _clickProgress(opt, e) {
         _change.call(win, opt, e);
-        if(opt.vibrate){
-            if(navigator.vibrate){
+        if (opt.vibrate) {
+            if (navigator.vibrate) {
                 navigator.vibrate(opt.vibrate);
             }
         }

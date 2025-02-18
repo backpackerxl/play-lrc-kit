@@ -232,16 +232,24 @@
             right: -.3rem;
             top: -.15rem;
             transition: all .3s;
-            cursor: pointer;
         }
 
         .progress-box:hover .progress-top .slider {
             opacity: 1;
         }
 
+        .progress-box .progress-top .slider.dragging{
+            cursor: grabbing !important;
+        }
+
+        .progress-box .progress.dragging{
+            cursor: grabbing !important;
+        }
+
         .progress-box .progress-top.scale .slider,
         .progress-box .progress-top .slider:hover {
             transform: scale(1.3);
+            cursor: grab;
         }
 
         .progress-box .time {
