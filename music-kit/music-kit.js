@@ -12,7 +12,6 @@ const LrcOrLyrcKit = (function (win, doc) {
         _mH = 0,
         _startPlay = null,
         _showTag = 'show',
-        _normal = true,
         _moveTag = true,
         _animationId = null,
         _targetY = 0,
@@ -22,8 +21,7 @@ const LrcOrLyrcKit = (function (win, doc) {
         _normalCSS = true,
         _audio = null;
 
-    // baseColor -> #979797 hilightColor -> #ff5724 fontSize -> 1.2rem -> lineHeight 4rem（不建议修改这个数值）
-    function doStyleCss(options, id) {
+    function _doStyleCss(options, id) {
         const {
             baseColor,
             poshilightColor,
@@ -33,39 +31,55 @@ const LrcOrLyrcKit = (function (win, doc) {
             tlyricSize,
             tlyricLineHeight,
             filter,
-            pMargin
+            pMargin,
+            letterAnimate
         } = options;
-        return `:root{--${id}-pMargin:${pMargin};--${id}-filter:${filter};--${id}-poshilightColor:${poshilightColor};--${id}-baseColor:${baseColor};--${id}-fontSize:${fontSize};--${id}-hilightColor:${hilightColor};--${id}-lineHeight:${lineHeight};--${id}-tlyricSize:${tlyricSize};--${id}-tlyricLineHeight:${tlyricLineHeight};}.hide-tlyric p.tly_word{display:none;}#${id} p.now,#${id} p.now .tly_word{transform: scale(1.05);filter:blur(0);transition: transform .3s ease-in-out; color:var(--${id}-poshilightColor);}#${id} p{color:var(--${id}-baseColor);filter:blur(var(--${id}-filter));margin:var(--${id}-pMargin) 0;padding:0;font-size:var(--${id}-fontSize);text-align:center;line-height:var(--${id}-lineHeight)}#${id} p span{padding-right:6px;}#${id} p.tly_word{margin:0 !important;font-size: var(--${id}-tlyricSize);line-height: var(--${id}-tlyricLineHeight);}#${id} p.color{color:var(--${id}-hilightColor);transition:all.1s ease-in-out}#${id} p span.now{color:transparent;background-image:linear-gradient(to left,var(--${id}-poshilightColor) calc(100% - calc(var(--${id}-progress) * 100%)),var(--${id}-hilightColor) calc(100% - calc(var(--${id}-progress) * 100%)));background-clip:text;-webkit-background-clip:text;transition: all .5s;}`;
+
+        // 如果未设置定位颜色
+        if (!poshilightColor) {
+            poshilightColor = baseColor;
+        }
+
+        let baseCSS = `:root{--${id}-pMargin:${pMargin};--${id}-filter:${filter};--${id}-poshilightColor:${poshilightColor};--${id}-baseColor:${baseColor};--${id}-fontSize:${fontSize};--${id}-hilightColor:${hilightColor};--${id}-lineHeight:${lineHeight};--${id}-tlyricSize:${tlyricSize};--${id}-tlyricLineHeight:${tlyricLineHeight};}.hide-tlyric p.tly_word{display:none;}#${id} p.now,#${id} p.now .tly_word{transform: scale(1.05);filter:blur(0);transition: transform .3s ease-in-out; color:var(--${id}-poshilightColor);}#${id} p{color:var(--${id}-baseColor);filter:blur(var(--${id}-filter));margin:var(--${id}-pMargin) 0;padding:0;font-size:var(--${id}-fontSize);text-align:center;line-height:var(--${id}-lineHeight)}#${id} p span{padding-right:6px;}#${id} p.tly_word{margin:0 !important;font-size: var(--${id}-tlyricSize);line-height: var(--${id}-tlyricLineHeight);}#${id} p.color{color:var(--${id}-hilightColor);transition:all.1s ease-in-out}`;
+
+        let letterAnimateArr = [];
+        // 注入样式
+        if (letterAnimate) {
+            let an = [],
+                afm = [],
+                atf = [];
+            letterAnimate.forEach(animate => {
+                letterAnimateArr.push(`@keyframes ${id}-${animate.animationName}{${animate.keyframes}}`);
+                an.push(`${id}-${animate.animationName}`);
+                afm.push(`${animate.animationFillMode}`);
+                atf.push(`${animate.animationTimingFunction}`);
+            });
+            letterAnimateArr.push(`.custom-animation span.now {color: var(--${id}-baseColor) !important;background-image: none !important;}.custom-animation span.now b {display: inline-block;animation-duration: var(--duration);animation-fill-mode: ${afm.join(',')};animation-timing-function: ${atf.join(',')};animation-name: ${an.join(',')};animation-delay: var(--delay);}`);
+        }
+
+        let nCSS = `#${id} p span.color{color:var(--${id}-hilightColor) !important}#${id} p span.now {--${id}-progress:0%;background-clip: text;-webkit-background-clip: text;transition: all .5s;color: transparent;background-image:linear-gradient(to left,var(--${id}-poshilightColor) var(--${id}-progress),var(--${id}-hilightColor) 0%);animation: var(--duration) ${id}-moveIn linear forwards;}`;
+
+        let moveIn = [];
+
+        for (let i = 0; i <= 100; i++) {
+            moveIn.push(`${i}% {--${id}-progress: ${100 - i}%;}`);
+        }
+
+        const styleCss = doc.createElement('style');
+        styleCss.textContent = baseCSS + letterAnimateArr.join('') + nCSS + `@keyframes ${id}-moveIn{${moveIn.join('')}}`;
+        doc.documentElement.querySelector('head').appendChild(styleCss);
     }
 
     // 渲染歌词，并初始化歌词数据，方便后面的歌词动效的使用
-    function _renderLrc() {
-        const { el, lyric_data, tlyric_lyric, lineWidth, options, func, splitLetter, letterAnimate } = _initOpt;
+    function _renderLrc(opt) {
+        const { el, splitLetter } = _initOpt;
+        const { lyric_data, tlyric_lyric, func } = opt;
 
         if (!el || !lyric_data || !func) {
             throw new Error("渲染视图的挂载点或歌词数据或歌词处理函数不能为空");
         }
 
-        const lw = lineWidth || 300,
-            _splitLetter = splitLetter || false;
-
-        let colorOptions = options || {
-            baseColor: 'rgb(233, 235, 235, .5)',
-            poshilightColor: 'rgb(233, 235, 235, .5)',
-            hilightColor: '#fff',
-            fontSize: '1.2rem',
-            lineHeight: '1.8rem',
-            tlyricSize: '1rem',
-            tlyricLineHeight: '1.6rem',
-            hilightBgColor: 'rgb(204, 204, 204, .2)',
-            filter: 'blur(0)',
-            pMargin: '1rem'
-        };
-
-        // 如果未设置定位颜色
-        if (!colorOptions.poshilightColor) {
-            colorOptions.poshilightColor = colorOptions.baseColor;
-        }
+        const _splitLetter = splitLetter || false;
 
         if (!(el instanceof Node)) {
             throw new Error('el不是一个元素节点');
@@ -90,6 +104,7 @@ const LrcOrLyrcKit = (function (win, doc) {
                 const spanTpl = doc.createDocumentFragment();
                 item.word_arr.forEach(word => {
                     const span = doc.createElement('span');
+                    span.style.setProperty('--duration', word[0][1] + 'ms');
                     if (_splitLetter) {
                         span.innerHTML = word[1].replace(/\S/g, '<b>$&</b>');
                         let startDelay = 0,
@@ -131,40 +146,29 @@ const LrcOrLyrcKit = (function (win, doc) {
             objTemp.time = item.current_time;
             _lrcNodeArr.push(objTemp);
         });
-        const id = el.id;
-
-        let letterAnimateArr = [];
-        // 注入样式
-        if (letterAnimate) {
-            let an = [],
-                afm = [],
-                atf = [];
-            letterAnimate.forEach(animate => {
-                letterAnimateArr.push(`@keyframes ${id}-${animate.animationName}{${animate.keyframes}}`);
-                an.push(`${id}-${animate.animationName}`);
-                afm.push(`${animate.animationFillMode}`);
-                atf.push(`${animate.animationTimingFunction}`);
-            });
-            letterAnimateArr.push(`.custom-animation span.now {color: var(--${id}-baseColor) !important;background-image: none !important;}.custom-animation span.now b {display: inline-block;animation-duration: var(--duration);animation-fill-mode: ${afm.join(',')};animation-timing-function: ${atf.join(',')};animation-name: ${an.join(',')};animation-delay: var(--delay);}`);
-        }
-
-        const styleCss = doc.createElement('style');
-        styleCss.textContent = doStyleCss(colorOptions, id) + letterAnimateArr.join('');
-        doc.documentElement.querySelector('head').appendChild(styleCss);
 
         el.appendChild(lrcTpl);
+        // 计算margin值
+        _mH = Number(win.getComputedStyle(_lrcNodeArr[0].target_node).marginBottom.replace('px', '')) * 2;
+        _firstMp = win.getComputedStyle(_lrcNodeArr[0].target_node).getPropertyValue('margin-top').replace('px', '') * 1;
+        _addBr();
+    }
 
+    function _addBr() {
+        // 先删除
+        _lrcContainer.querySelectorAll('br').forEach(oBr => {
+            oBr.remove();
+        });
+        let lw = _initOpt.lineWidth || 300;
         // 处理每个歌词的宽度
         _lrcNodeArr.forEach(node => {
             node.span_arr.forEach(obj => {
                 obj.offsetWidth = obj.span.offsetWidth;
             });
         });
-
         // 处理单词换行
         for (let node of _lrcNodeArr) {
             const p = node.target_node;
-
             node.span_arr.reduce((init, obj) => {
                 let tw = init + obj.offsetWidth;
                 if (tw > lw) {
@@ -174,13 +178,6 @@ const LrcOrLyrcKit = (function (win, doc) {
                 return tw;
             }, 0);
         }
-
-        // 计算margin值
-        _mH = Number(win.getComputedStyle(_lrcNodeArr[0].target_node).marginBottom.replace('px', '')) * 2;
-        _halfContainerH = el.getBoundingClientRect().height / 2;
-        _firstMp = window.getComputedStyle(_lrcNodeArr[0].target_node).getPropertyValue('margin-top').replace('px', '') * 1;
-        // 保存歌词容器
-        _lrcContainer = el;
     }
 
 
@@ -332,8 +329,24 @@ const LrcOrLyrcKit = (function (win, doc) {
     function _init(opt) {
         // 保存初始化参数
         _initOpt = opt;
-        // 初始化歌词
-        _renderLrc();
+        opt.options = opt.options || {
+            baseColor: 'rgb(233, 235, 235, .5)',
+            hilightColor: '#fff',
+            fontSize: '1.2rem',
+            lineHeight: '1.8rem',
+            tlyricSize: '1rem',
+            tlyricLineHeight: '1.6rem',
+            hilightBgColor: 'rgb(204, 204, 204, .2)',
+            filter: 'blur(0)',
+            pMargin: '1rem'
+        }
+
+        _doStyleCss(opt.options, opt.el.id);
+
+        _halfContainerH = opt.el.getBoundingClientRect().height / 2;
+        // 保存歌词容器
+        _lrcContainer = opt.el;
+
         if (opt.bindAudio) {
             _bindAudio({ el: opt.bindAudio })
         } else {
@@ -414,7 +427,6 @@ const LrcOrLyrcKit = (function (win, doc) {
                 _oldNode.target_node.className = '';
                 _oldNode.span_arr.forEach(el => {
                     el.span.className = '';
-                    el.span.style = '';
                 });
             }
 
@@ -438,52 +450,11 @@ const LrcOrLyrcKit = (function (win, doc) {
             if (span_arr.length > 0) {
                 span_arr.forEach(el => {
                     if (el.stm <= currentTime && el.span.classList.length === 0) {
-                        console.log(el.stm, currentTime.toFixed(2));
                         el.span.classList.add('now');
-                        if (_normalCSS) {
-                            // if (_normal) {
-                                // _animateProgress(el.span, 0);
-                            // } else {
-                                _animateProgress(el.span, el.stm, el.duration);
-                            // }
-                        }
                     }
                 });
             }
         }
-    }
-
-
-    /**
-     * 计算progress并设置Property
-     **/
-    function _animateProgress(el, stm, duration) {
-        let num = 0;
-        let frameDuration = 16.67; // 每帧时长 16.67ms
-
-        // const totalFrames = duration / frameDuration; // 总帧数
-        const totalFrames = stm + duration; // 总帧数
-        // let currentFrame = 0; // 当前帧数
-        // 设置动画参数--progress
-        // requestAnimationFrame(function(){
-            do {
-                num = Math.floor((stm / totalFrames) * 100);
-                el.style.setProperty(`--${_lrcContainer.id}-progress`, num * 0.01);
-                stm++;
-            } while(stm < totalFrames);
-        // })
-        // function animate() {
-        //     if (stm < totalFrames) {
-        //         num = Math.floor((stm / totalFrames) * 100);
-        //         el.style.setProperty(`--${_lrcContainer.id}-progress`, num * 0.01);
-        //         stm++;
-        //         requestAnimationFrame(animate);
-        //     } else {
-        //         el.style.setProperty(`--${_lrcContainer.id}-progress`, 1);
-        //     }
-        // }
-
-        // requestAnimationFrame(animate);
     }
 
     /**
@@ -592,11 +563,12 @@ const LrcOrLyrcKit = (function (win, doc) {
         let _startPlay = opt.startPlay;
         if (_startPlay) {
             _startPlay.addEventListener('click', function () {
-                // 清除已有样式
-                oldTar.span_arr.forEach(el => {
-                    el.span.className = '';
-                    el.span.style = '';
-                });
+                if (_oldNode) {
+                    _oldNode.target_node.classList.remove('now');
+                    _oldNode.span_arr.forEach(oSpan => {
+                        oSpan.span.className = '';
+                    });
+                }
                 _audio.currentTime = oldTar.target_node.dataset.time;
                 cancelAnimationFrame(animateId); // 取消动画
                 _unMoveCallBack && _unMoveCallBack(); // 卸载参照物
@@ -739,19 +711,17 @@ const LrcOrLyrcKit = (function (win, doc) {
         // 清空样式
         if (_oldNode) {
             _oldNode.target_node.classList.remove('now');
-            _oldNode.span_arr.forEach(el => {
-                el.span.className = '';
-                el.span.style = '';
+            _oldNode.span_arr.forEach(oSpan => {
+                oSpan.span.className = '';
             });
         }
         let node = _lrcNodeArr.reduce((prev, curr) => {
             return Math.abs(curr.time - target) < Math.abs(prev.time - target) && curr.time < target ? curr : prev;
         });
 
-        node.span_arr.forEach((spanNode) => {
+        node.span_arr.forEach(spanNode => {
             if (spanNode.stm < target && _normalCSS) {
-                spanNode.span.classList.add('now');
-                spanNode.span.style.setProperty(`--${_lrcContainer.id}-progress`, 1);
+                spanNode.span.classList.add('color');
             }
         });
 
@@ -811,6 +781,12 @@ const LrcOrLyrcKit = (function (win, doc) {
         getMusicTime(currentTime) {
             return _getMusicTime(currentTime);
         },
+        renderLrc(opt) {
+            _renderLrc(opt);
+        },
+        addBr() {
+            _addBr();
+        },
         changeAnimation() {
             if (!_initOpt.splitLetter) {
                 console.warn("单词未分割，自定义动画将不会生效!!!");
@@ -822,9 +798,7 @@ const LrcOrLyrcKit = (function (win, doc) {
             _showThumLryc(currentTime, oNode, highlight);
         },
         doLrcLyric: _doLrcLyric,
-        doYrcLyric: _doYrcLyric,
-        lrcNodeArr: _lrcNodeArr,
-        songWord: _song_word
+        doYrcLyric: _doYrcLyric
     };
 })(window, document);
 
