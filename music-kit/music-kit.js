@@ -31,8 +31,7 @@ const LrcOrLyrcKit = (function (win, doc) {
             tlyricSize,
             tlyricLineHeight,
             filter,
-            pMargin,
-            letterAnimate
+            pMargin
         } = options;
 
         // 如果未设置定位颜色
@@ -44,11 +43,11 @@ const LrcOrLyrcKit = (function (win, doc) {
 
         let letterAnimateArr = [];
         // 注入样式
-        if (letterAnimate) {
+        if (_initOpt.letterAnimate) {
             let an = [],
                 afm = [],
                 atf = [];
-            letterAnimate.forEach(animate => {
+                _initOpt.letterAnimate.forEach(animate => {
                 letterAnimateArr.push(`@keyframes ${id}-${animate.animationName}{${animate.keyframes}}`);
                 an.push(`${id}-${animate.animationName}`);
                 afm.push(`${animate.animationFillMode}`);
