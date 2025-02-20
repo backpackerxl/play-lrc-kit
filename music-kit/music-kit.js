@@ -47,7 +47,7 @@ const LrcOrLyrcKit = (function (win, doc) {
             let an = [],
                 afm = [],
                 atf = [];
-                _initOpt.letterAnimate.forEach(animate => {
+            _initOpt.letterAnimate.forEach(animate => {
                 letterAnimateArr.push(`@keyframes ${id}-${animate.animationName}{${animate.keyframes}}`);
                 an.push(`${id}-${animate.animationName}`);
                 afm.push(`${animate.animationFillMode}`);
@@ -56,16 +56,17 @@ const LrcOrLyrcKit = (function (win, doc) {
             letterAnimateArr.push(`.custom-animation span.now {color: var(--${id}-baseColor) !important;background-image: none !important;}.custom-animation span.now b {display: inline-block;animation-duration: var(--duration);animation-fill-mode: ${afm.join(',')};animation-timing-function: ${atf.join(',')};animation-name: ${an.join(',')};animation-delay: var(--delay);}`);
         }
 
-        let nCSS = `#${id} p span.color{color:var(--${id}-hilightColor) !important}#${id} p span.now {--${id}-progress:0%;background-clip: text;-webkit-background-clip: text;transition: all .5s;color: transparent;background-image:linear-gradient(to left,var(--${id}-poshilightColor) var(--${id}-progress),var(--${id}-hilightColor) 0%);animation: var(--duration) ${id}-moveIn linear forwards;}`;
+        let nCSS = `#${id} p span.color{color:var(--${id}-hilightColor) !important}#${id} p span {--progress:100%;background-clip: text;-webkit-background-clip: text;transition: all .5s;color: transparent;background-image:linear-gradient(to left,var(--${id}-poshilightColor) var(--progress),var(--${id}-hilightColor) 0%);animation: var(--duration) ${id}-moveIn linear forwards;}`;
 
-        let moveIn = [];
+        // let moveIn = [];
 
-        for (let i = 0; i <= 100; i++) {
-            moveIn.push(`${i}% {--${id}-progress: ${100 - i}%;}`);
-        }
+        // for (let i = 0; i <= 100; i++) {
+        //     moveIn.push(`${i}% {--${id}-progress: ${100 - i}%;}`);
+        // }
 
         const styleCss = doc.createElement('style');
-        styleCss.textContent = baseCSS + letterAnimateArr.join('') + nCSS + `@keyframes ${id}-moveIn{${moveIn.join('')}}`;
+        styleCss.textContent = baseCSS + letterAnimateArr.join('') + nCSS
+        // + `@keyframes ${id}-moveIn{${moveIn.join('')}}`;
         doc.documentElement.querySelector('head').appendChild(styleCss);
     }
 
@@ -103,7 +104,7 @@ const LrcOrLyrcKit = (function (win, doc) {
                 const spanTpl = doc.createDocumentFragment();
                 item.word_arr.forEach(word => {
                     const span = doc.createElement('span');
-                    span.style.setProperty('--duration', word[0][1] + 'ms');
+                    // span.style.setProperty('--duration', word[0][1] + 'ms');
                     if (_splitLetter) {
                         span.innerHTML = word[1].replace(/\S/g, '<b>$&</b>');
                         let startDelay = 0,
@@ -426,6 +427,7 @@ const LrcOrLyrcKit = (function (win, doc) {
                 _oldNode.target_node.className = '';
                 _oldNode.span_arr.forEach(el => {
                     el.span.className = '';
+                    el.span.style.setProperty('--progress', '100%')
                 });
             }
 
@@ -449,12 +451,38 @@ const LrcOrLyrcKit = (function (win, doc) {
             if (span_arr.length > 0) {
                 span_arr.forEach(el => {
                     if (el.stm <= currentTime && el.span.classList.length === 0) {
-                        el.span.classList.add('now');
+                        // el.span.classList.add('now');
+                        _addProgress(el.span, el.duration);
                     }
                 });
             }
         }
     }
+
+    /**
+     * 动态变化
+     * @param {持续时间} duration 
+     */
+    function _addProgress(span, duration) {
+        let num = 0;
+        let frameDuration = 16.67; // 每帧时长 16.67ms
+
+        const totalFrames = duration / frameDuration; // 总帧数
+        let currentFrame = 0; // 当前帧数
+        // 设置动画参数--progress
+        function animate() {
+            if (currentFrame < totalFrames) {
+                num = Math.floor((currentFrame / totalFrames) * 100);
+                span.style.setProperty(`--progress`, `${100 - num}%`);
+                currentFrame++;
+                requestAnimationFrame(animate);
+            } else {
+                span.style.setProperty(`--progress`, '100%');
+            }
+        }
+        requestAnimationFrame(animate);
+    }
+
 
     /**
      * 歌词滚动
