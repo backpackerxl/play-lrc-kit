@@ -53,20 +53,14 @@ const LrcOrLyrcKit = (function (win, doc) {
                 afm.push(`${animate.animationFillMode}`);
                 atf.push(`${animate.animationTimingFunction}`);
             });
-            letterAnimateArr.push(`.custom-animation span.now {color: var(--${id}-baseColor) !important;background-image: none !important;}.custom-animation span.now b {display: inline-block;animation-duration: var(--duration);animation-fill-mode: ${afm.join(',')};animation-timing-function: ${atf.join(',')};animation-name: ${an.join(',')};animation-delay: var(--delay);}`);
+            // .custom-animation span.now {color: var(--${id}-baseColor) !important;background-image: none !important;}.custom-animation
+            // letterAnimateArr.push(`#${id} p span.now b {display: inline-block;animation-duration: var(--duration);animation-fill-mode: ${afm.join(',')};animation-timing-function: ${atf.join(',')};animation-name: ${an.join(',')};animation-delay: var(--delay);}`);
         }
 
-        let nCSS = `#${id} p span.color{color:var(--${id}-hilightColor) !important}#${id} p span {--progress:100%;background-clip: text;-webkit-background-clip: text;transition: all .5s;color: transparent;background-image:linear-gradient(to left,var(--${id}-poshilightColor) var(--progress),var(--${id}-hilightColor) 0%);animation: var(--duration) ${id}-moveIn linear forwards;}`;
-
-        // let moveIn = [];
-
-        // for (let i = 0; i <= 100; i++) {
-        //     moveIn.push(`${i}% {--${id}-progress: ${100 - i}%;}`);
-        // }
+        let nCSS = `#${id} p span.color{color:var(--${id}-hilightColor) !important}#${id} p span.now {--progress:100%;background-clip: text;-webkit-background-clip: text;transition: all .5s;color: transparent;background-image:linear-gradient(to left,var(--${id}-poshilightColor) var(--progress),var(--${id}-hilightColor)  0%);}`;
 
         const styleCss = doc.createElement('style');
         styleCss.textContent = baseCSS + letterAnimateArr.join('') + nCSS
-        // + `@keyframes ${id}-moveIn{${moveIn.join('')}}`;
         doc.documentElement.querySelector('head').appendChild(styleCss);
     }
 
@@ -451,7 +445,7 @@ const LrcOrLyrcKit = (function (win, doc) {
             if (span_arr.length > 0) {
                 span_arr.forEach(el => {
                     if (el.stm <= currentTime && el.span.classList.length === 0) {
-                        // el.span.classList.add('now');
+                         el.span.classList.add('now');
                         _addProgress(el.span, el.duration);
                     }
                 });
@@ -464,23 +458,25 @@ const LrcOrLyrcKit = (function (win, doc) {
      * @param {持续时间} duration 
      */
     function _addProgress(span, duration) {
-        let num = 0;
-        let frameDuration = 16.67; // 每帧时长 16.67ms
+        let start = null; // 记录动画开始的时间
+        const startValue = 100; // 起始值为100
 
-        const totalFrames = duration / frameDuration; // 总帧数
-        let currentFrame = 0; // 当前帧数
-        // 设置动画参数--progress
-        function animate() {
-            if (currentFrame < totalFrames) {
-                num = Math.floor((currentFrame / totalFrames) * 100);
-                span.style.setProperty(`--progress`, `${100 - num}%`);
-                currentFrame++;
-                requestAnimationFrame(animate);
-            } else {
-                span.style.setProperty(`--progress`, '100%');
+        function step(timestamp) {
+            if (!start) start = timestamp; // 如果是第一帧，记录开始时间
+            const progress = timestamp - start; // 计算已经过去的时间
+            // 根据进度比例计算当前值
+            let currentValue = startValue * ((duration - progress) / duration);
+            // 确保currentValue不会小于0
+            currentValue = Math.max(currentValue, 0);
+            // console.log(currentValue); // 输出当前值
+            span.style.setProperty(`--progress`, `${currentValue}%`);
+            // 如果还没达到目标时间且currentValue不为0，则继续下一帧
+            if (progress < duration && currentValue > 0) {
+                requestAnimationFrame(step);
             }
         }
-        requestAnimationFrame(animate);
+        // 开始动画
+        requestAnimationFrame(step);
     }
 
 
@@ -594,6 +590,7 @@ const LrcOrLyrcKit = (function (win, doc) {
                     _oldNode.target_node.classList.remove('now');
                     _oldNode.span_arr.forEach(oSpan => {
                         oSpan.span.className = '';
+                        oSpan.span.style.setProperty('--progress', '100%');
                     });
                 }
                 _audio.currentTime = oldTar.target_node.dataset.time;
@@ -740,6 +737,7 @@ const LrcOrLyrcKit = (function (win, doc) {
             _oldNode.target_node.classList.remove('now');
             _oldNode.span_arr.forEach(oSpan => {
                 oSpan.span.className = '';
+                oSpan.span.style.setProperty('--progress', '100%');
             });
         }
         let node = _lrcNodeArr.reduce((prev, curr) => {
