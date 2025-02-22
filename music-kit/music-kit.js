@@ -17,63 +17,57 @@ const LrcOrLyrcKit = (function (win, doc) {
         _targetY = 0,
         _oldNode = null,
         _firstMp = 0,
+        _oNowSpan = null,
+        _nowDuration = 0,
+        _textMoveAnId = null,
+        _splitLetter = false,
         _halfContainerH = 0,
-        _normalCSS = true,
         _audio = null;
 
     function _doStyleCss(options, id) {
+        // 初始化
+        options = options || {
+            baseColor: 'rgb(255, 255, 255, .6)',
+            hilightColor: '#fff',
+            fontSize: '1.2rem',
+            lineHeight: '1.8rem',
+            tlyricSize: '1rem',
+            tlyricLineHeight: '1.6rem',
+            pMargin: '1rem'
+        };
         const {
             baseColor,
-            poshilightColor,
             hilightColor,
             fontSize,
             lineHeight,
             tlyricSize,
             tlyricLineHeight,
-            filter,
             pMargin
         } = options;
 
-        // 如果未设置定位颜色
-        if (!poshilightColor) {
-            poshilightColor = baseColor;
-        }
+        let baseCSS = `:root{--${id}-pMargin:${pMargin};--${id}-baseColor:${baseColor};--${id}-fontSize:${fontSize};--${id}-hilightColor:${hilightColor};--${id}-lineHeight:${lineHeight};--${id}-tlyricSize:${tlyricSize};--${id}-tlyricLineHeight:${tlyricLineHeight};}.hide-tlyric p.tly_word{display:none;}#${id} p{color: var(--${id}-baseColor);transition: all .2s;margin:var(--${id}-pMargin) 0;padding:0;font-size:var(--${id}-fontSize);text-align:center;line-height:var(--${id}-lineHeight)}#${id} p span{padding-right:.5rem;}#${id} p.tly_word{margin:0 !important;font-size: var(--${id}-tlyricSize);line-height: var(--${id}-tlyricLineHeight);}#${id} p.color{color:var(--${id}-hilightColor);}`;
 
-        let baseCSS = `:root{--${id}-pMargin:${pMargin};--${id}-filter:${filter};--${id}-poshilightColor:${poshilightColor};--${id}-baseColor:${baseColor};--${id}-fontSize:${fontSize};--${id}-hilightColor:${hilightColor};--${id}-lineHeight:${lineHeight};--${id}-tlyricSize:${tlyricSize};--${id}-tlyricLineHeight:${tlyricLineHeight};}.hide-tlyric p.tly_word{display:none;}#${id} p.now,#${id} p.now .tly_word{transform: scale(1.05);filter:blur(0);transition: transform .3s ease-in-out; color:var(--${id}-poshilightColor);}#${id} p{color:var(--${id}-baseColor);filter:blur(var(--${id}-filter));margin:var(--${id}-pMargin) 0;padding:0;font-size:var(--${id}-fontSize);text-align:center;line-height:var(--${id}-lineHeight)}#${id} p span{padding-right:6px;}#${id} p.tly_word{margin:0 !important;font-size: var(--${id}-tlyricSize);line-height: var(--${id}-tlyricLineHeight);}#${id} p.color{color:var(--${id}-hilightColor);transition:all.1s ease-in-out}`;
 
-        let letterAnimateArr = [];
-        // 注入样式
-        if (_initOpt.letterAnimate) {
-            let an = [],
-                afm = [],
-                atf = [];
-            _initOpt.letterAnimate.forEach(animate => {
-                letterAnimateArr.push(`@keyframes ${id}-${animate.animationName}{${animate.keyframes}}`);
-                an.push(`${id}-${animate.animationName}`);
-                afm.push(`${animate.animationFillMode}`);
-                atf.push(`${animate.animationTimingFunction}`);
-            });
-            // .custom-animation span.now {color: var(--${id}-baseColor) !important;background-image: none !important;}.custom-animation
-            // letterAnimateArr.push(`#${id} p span.now b {display: inline-block;animation-duration: var(--duration);animation-fill-mode: ${afm.join(',')};animation-timing-function: ${atf.join(',')};animation-name: ${an.join(',')};animation-delay: var(--delay);}`);
-        }
-
-        let nCSS = `#${id} p span.color{color:var(--${id}-hilightColor) !important}#${id} p span.now {--progress:100%;background-clip: text;-webkit-background-clip: text;transition: all .5s;color: transparent;background-image:linear-gradient(to left,var(--${id}-poshilightColor) var(--progress),var(--${id}-hilightColor)  0%);}`;
+        let nCSS = `#${id} p span.color{color:var(--${id}-hilightColor) !important}#${id} p span.now {--progress:100;color: transparent;background-clip: text;-webkit-background-clip: text;background-image:linear-gradient(to left, var(--${id}-baseColor) calc(var(--progress) * 1%),var(--${id}-hilightColor)  0%);}`;
 
         const styleCss = doc.createElement('style');
-        styleCss.textContent = baseCSS + letterAnimateArr.join('') + nCSS
+        styleCss.textContent = baseCSS + nCSS
         doc.documentElement.querySelector('head').appendChild(styleCss);
     }
 
     // 渲染歌词，并初始化歌词数据，方便后面的歌词动效的使用
     function _renderLrc(opt) {
-        const { el, splitLetter } = _initOpt;
-        const { lyric_data, tlyric_lyric, func } = opt;
+        // 清空容器
+        _lrcNodeArr = [];
+        _song_word = [];
+        const { el } = _initOpt;
+        const { lyric_data, tlyric_lyric, func, splitLetter } = opt;
 
         if (!el || !lyric_data || !func) {
             throw new Error("渲染视图的挂载点或歌词数据或歌词处理函数不能为空");
         }
 
-        const _splitLetter = splitLetter || false;
+        _splitLetter = splitLetter || false;
 
         if (!(el instanceof Node)) {
             throw new Error('el不是一个元素节点');
@@ -98,7 +92,6 @@ const LrcOrLyrcKit = (function (win, doc) {
                 const spanTpl = doc.createDocumentFragment();
                 item.word_arr.forEach(word => {
                     const span = doc.createElement('span');
-                    // span.style.setProperty('--duration', word[0][1] + 'ms');
                     if (_splitLetter) {
                         span.innerHTML = word[1].replace(/\S/g, '<b>$&</b>');
                         let startDelay = 0,
@@ -143,9 +136,12 @@ const LrcOrLyrcKit = (function (win, doc) {
 
         el.appendChild(lrcTpl);
         // 计算margin值
-        _mH = Number(win.getComputedStyle(_lrcNodeArr[0].target_node).marginBottom.replace('px', '')) * 2;
+        _mH = win.getComputedStyle(_lrcNodeArr[0].target_node).marginBottom.replace('px', '') * 2;
         _firstMp = win.getComputedStyle(_lrcNodeArr[0].target_node).getPropertyValue('margin-top').replace('px', '') * 1;
         _addBr();
+        if (_audio.currentTime !== 0) {
+            _toCurrentLyrc(_audio.currentTime); // 调一次定位函数
+        }
     }
 
     function _addBr() {
@@ -323,17 +319,6 @@ const LrcOrLyrcKit = (function (win, doc) {
     function _init(opt) {
         // 保存初始化参数
         _initOpt = opt;
-        opt.options = opt.options || {
-            baseColor: 'rgb(233, 235, 235, .5)',
-            hilightColor: '#fff',
-            fontSize: '1.2rem',
-            lineHeight: '1.8rem',
-            tlyricSize: '1rem',
-            tlyricLineHeight: '1.6rem',
-            hilightBgColor: 'rgb(204, 204, 204, .2)',
-            filter: 'blur(0)',
-            pMargin: '1rem'
-        }
 
         _doStyleCss(opt.options, opt.el.id);
 
@@ -370,6 +355,7 @@ const LrcOrLyrcKit = (function (win, doc) {
         // 节约性能，停止播放后移除动画帧
         _audio.addEventListener('pause', function () {
             cancelAnimationFrame(_animationId);
+            cancelAnimationFrame(_textMoveAnId);
         });
 
         let timer;
@@ -379,6 +365,10 @@ const LrcOrLyrcKit = (function (win, doc) {
             _normal = true;
             if (timer) {
                 clearTimeout(timer);
+            }
+            if (_oNowSpan && _nowDuration) {
+                const nowP = win.getComputedStyle(_oNowSpan).getPropertyValue('--progress');
+                _addProgress(_oNowSpan, _nowDuration - _nowDuration * nowP / 100, nowP);
             }
             _timerMove();
             timer = setTimeout(() => {
@@ -421,7 +411,7 @@ const LrcOrLyrcKit = (function (win, doc) {
                 _oldNode.target_node.className = '';
                 _oldNode.span_arr.forEach(el => {
                     el.span.className = '';
-                    el.span.style.setProperty('--progress', '100%')
+                    el.span.style.setProperty('--progress', '100');
                 });
             }
 
@@ -445,8 +435,11 @@ const LrcOrLyrcKit = (function (win, doc) {
             if (span_arr.length > 0) {
                 span_arr.forEach(el => {
                     if (el.stm <= currentTime && el.span.classList.length === 0) {
-                         el.span.classList.add('now');
-                        _addProgress(el.span, el.duration);
+                        el.span.classList.add('now');
+                        _addProgress(el.span, el.duration, 100);
+                        // 缓存一波数据
+                        _oNowSpan = el.span;
+                        _nowDuration = el.duration;
                     }
                 });
             }
@@ -457,26 +450,29 @@ const LrcOrLyrcKit = (function (win, doc) {
      * 动态变化
      * @param {持续时间} duration 
      */
-    function _addProgress(span, duration) {
+    function _addProgress(span, duration, nowP) {
         let start = null; // 记录动画开始的时间
-        const startValue = 100; // 起始值为100
+        // 处理极端情况
+        if (duration === 0) {
+            span.style.setProperty(`--progress`, `0`);
+            return;
+        }
 
         function step(timestamp) {
             if (!start) start = timestamp; // 如果是第一帧，记录开始时间
             const progress = timestamp - start; // 计算已经过去的时间
             // 根据进度比例计算当前值
-            let currentValue = startValue * ((duration - progress) / duration);
+            let currentValue = nowP * ((duration - progress) / duration);
             // 确保currentValue不会小于0
             currentValue = Math.max(currentValue, 0);
-            // console.log(currentValue); // 输出当前值
-            span.style.setProperty(`--progress`, `${currentValue}%`);
+            span.style.setProperty(`--progress`, `${currentValue}`);
             // 如果还没达到目标时间且currentValue不为0，则继续下一帧
             if (progress < duration && currentValue > 0) {
-                requestAnimationFrame(step);
+                _textMoveAnId = requestAnimationFrame(step);
             }
         }
         // 开始动画
-        requestAnimationFrame(step);
+        _textMoveAnId = requestAnimationFrame(step);
     }
 
 
@@ -590,7 +586,7 @@ const LrcOrLyrcKit = (function (win, doc) {
                     _oldNode.target_node.classList.remove('now');
                     _oldNode.span_arr.forEach(oSpan => {
                         oSpan.span.className = '';
-                        oSpan.span.style.setProperty('--progress', '100%');
+                        oSpan.span.style.setProperty('--progress', '100');
                     });
                 }
                 _audio.currentTime = oldTar.target_node.dataset.time;
@@ -737,7 +733,7 @@ const LrcOrLyrcKit = (function (win, doc) {
             _oldNode.target_node.classList.remove('now');
             _oldNode.span_arr.forEach(oSpan => {
                 oSpan.span.className = '';
-                oSpan.span.style.setProperty('--progress', '100%');
+                oSpan.span.style.setProperty('--progress', '100');
             });
         }
         let node = _lrcNodeArr.reduce((prev, curr) => {
@@ -745,7 +741,7 @@ const LrcOrLyrcKit = (function (win, doc) {
         });
 
         node.span_arr.forEach(spanNode => {
-            if (spanNode.stm < target && _normalCSS) {
+            if (spanNode.stm < target) {
                 spanNode.span.classList.add('color');
             }
         });
@@ -758,7 +754,7 @@ const LrcOrLyrcKit = (function (win, doc) {
     /** 结束跳转 */
 
     /** 显示缩略图 */
-    function _showThumLryc(target, oNode, highlight) {
+    function _showThumLryc(target, oNode, highlight, num) {
         if (Number.isNaN(target)) {
             return;
         }
@@ -769,8 +765,24 @@ const LrcOrLyrcKit = (function (win, doc) {
         let idx = node.idx,
             lastIdx = _song_word.length - 1;
 
-        let nodeArr = [_song_word[Math.max(0, idx - 2)], _song_word[Math.max(0, idx - 1)], { ...node, flag: true }, _song_word[Math.min(lastIdx, idx + 1)], _song_word[Math.min(lastIdx, idx + 2)]];
-        nodeArr = [...new Set(nodeArr)];
+        let nodeArr = [];
+        if (num === 0) {
+            nodeArr.push({ ...node, flag: true });
+        } else {
+            let prevNodeArr = new Set();
+            let suffixNodeArr = new Set();
+            for (let i = 0; i < num; i++) {
+                if (idx > 0) {
+                    prevNodeArr.add(_song_word[Math.max(idx - num + i, 0)]);
+                }
+                if (idx > 0 && idx !== lastIdx) {
+                    suffixNodeArr.add(_song_word[Math.min(idx + i + 1, lastIdx)]);
+                }
+            }
+            nodeArr = [...prevNodeArr, { ...node, flag: true }, ...suffixNodeArr];
+        }
+
+        console.log(nodeArr)
         const pTpl = doc.createDocumentFragment();
 
         nodeArr.forEach(item => {
@@ -812,15 +824,8 @@ const LrcOrLyrcKit = (function (win, doc) {
         addBr() {
             _addBr();
         },
-        changeAnimation() {
-            if (!_initOpt.splitLetter) {
-                console.warn("单词未分割，自定义动画将不会生效!!!");
-            }
-            _lrcContainer.classList.toggle('custom-animation');
-            _normalCSS = !_normalCSS;
-        },
-        showThumLryc(currentTime, oNode, highlight) {
-            _showThumLryc(currentTime, oNode, highlight);
+        showThumLryc(currentTime, oNode, highlight, num) {
+            _showThumLryc(currentTime, oNode, highlight, num);
         },
         doLrcLyric: _doLrcLyric,
         doYrcLyric: _doYrcLyric
@@ -832,7 +837,7 @@ const LrcOrLyrcKit = (function (win, doc) {
  * @author: backpackerxl 2025/2/15
  * @description: 这是音乐播放器控件控制工具
  */
-const MusicControl = (function (win, doc) {
+const MusicBarControl = (function (win, doc) {
     let _moveAnId = null,
         _cNow = 0,
         _width = 0,
@@ -909,7 +914,7 @@ const MusicControl = (function (win, doc) {
             opt.oNowTime.innerText = LrcOrLyrcKit.getMusicTime(_cNow);
         }
         if (opt.oShowLyrc && opt.oShowLyrc instanceof HTMLElement) {
-            LrcOrLyrcKit.showThumLryc(_cNow, opt.oShowLyrc, 'highlight');
+            LrcOrLyrcKit.showThumLryc(_cNow, opt.oShowLyrc, 'highlight', 2);
         }
     }
 

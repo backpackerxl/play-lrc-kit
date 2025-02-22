@@ -39,13 +39,13 @@
             overflow-x: hidden;
             scrollbar-width: none;
             margin: .5rem 0;
-            font-weight: 500;
+            transition: all .2s;
         }
 
-        #lrc b {
+        #lrc b,
+        #lrc p {
             font-weight: 500;
-            letter-spacing: .08rem;
-            transition: all .1s;
+            letter-spacing: .05rem;
         }
 
         #lrc p:first-child {
@@ -387,7 +387,7 @@
         </div>
     </div>
 
-    <button id="changCSS" class="normal-btn">切换歌词动效</button>
+    <!-- <button id="changCSS" class="normal-btn">切换歌词动效</button> -->
 
     <audio src="music/go-beyond.mp3" preload="metadata"></audio>
 
@@ -397,7 +397,7 @@
     <script>
         // 实现控制
         const oPlayBtn = document.getElementById('playBtn'),
-            oChangeCSS = document.getElementById('changCSS'),
+            // oChangeCSS = document.getElementById('changCSS'),
             oTranslation = document.getElementById('translation'),
             oShowLyrc = document.getElementById('showLyrc'),
             oAudio = document.querySelector('audio'),
@@ -475,27 +475,15 @@
         const options = {
             el: document.getElementById('lrc'),
             options: {
-                baseColor: 'rgb(233, 235, 235)',
-                poshilightColor: 'rgb(233, 235, 235)',
+                baseColor: 'rgb(255, 255, 255, .6)',
                 hilightColor: 'rgb(0, 255, 127)',
                 fontSize: '1.3rem',
                 lineHeight: '1.8rem',
                 tlyricSize: '1rem',
                 tlyricLineHeight: '1.6rem',
                 hilightBgColor: 'rgb(204, 204, 204, .2)',
-                filter: '.12rem',
                 pMargin: '1rem'
             },
-            splitLetter: true,
-            letterAnimate: [
-                {
-                    // color: rgb(0, 255, 127);
-                    keyframes: `to {transform: translateY(-.15rem);}`,
-                    animationFillMode: 'forwards',
-                    animationTimingFunction: 'ease-out',
-                    animationName: 'jump' //必传
-                }
-            ],
             lineWidth: lineWidth,
             bindAudio: oAudio,
             bindPlacePlay: {
@@ -544,12 +532,13 @@
         LrcOrLyrcKit.renderLrc({
             lyric_data: data.yrc.lyric,
             tlyric_lyric: data.ytlrc.lyric,
+            splitLetter: false, // 是否分割英文歌词的每一个字母
             func: LrcOrLyrcKit.doYrcLyric,
         });
 
         // 初始化音量调节器
         oAudio.volume = 0.5; // 初始化音量
-        MusicControl.init({
+        MusicBarControl.init({
             oSlider: oSliderVolume,
             oProgress: oProgressVolume,
             oProgressUnder: oProgressUnderVolume,
@@ -572,7 +561,7 @@
         });
 
         // 初始化音乐进度条
-        MusicControl.init({
+        MusicBarControl.init({
             el: oAudio,
             oPlay: oPlay,
             oPause: oPause,
@@ -597,14 +586,6 @@
         oTranslation.addEventListener('click', function () {
             // 显示或隐藏翻译，默认显示
             LrcOrLyrcKit.translation();
-            if (navigator.vibrate) {
-                navigator.vibrate(10);
-            }
-        });
-
-        oChangeCSS.addEventListener('click', function () {
-            // 切换歌词动效
-            LrcOrLyrcKit.changeAnimation();
             if (navigator.vibrate) {
                 navigator.vibrate(10);
             }
