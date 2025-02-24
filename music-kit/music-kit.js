@@ -22,38 +22,19 @@ const LrcOrLyrcKit = (function (win, doc) {
         _textMoveAnId = null,
         _splitLetter = false,
         _halfContainerH = 0,
+        _uniqueAttribute = `data-lrc-${Math.random().toString(36).substring(2, 8)}`;
         _audio = null;
 
-    function _doStyleCss(options, id) {
-        // 初始化
-        options = options || {
-            baseColor: 'rgb(255, 255, 255, .6)',
-            hilightColor: '#fff',
-            fontSize: '1.2rem',
-            lineHeight: '1.8rem',
-            tlyricSize: '1rem',
-            tlyricLineHeight: '1.6rem',
-            pMargin: '1rem'
-        };
-        const {
-            baseColor,
-            hilightColor,
-            fontSize,
-            lineHeight,
-            tlyricSize,
-            tlyricLineHeight,
-            pMargin
-        } = options;
-
-        let baseCSS = `:root{--${id}-pMargin:${pMargin};--${id}-baseColor:${baseColor};--${id}-fontSize:${fontSize};--${id}-hilightColor:${hilightColor};--${id}-lineHeight:${lineHeight};--${id}-tlyricSize:${tlyricSize};--${id}-tlyricLineHeight:${tlyricLineHeight};}.hide-tlyric p.tly_word{display:none;}#${id} p{color: var(--${id}-baseColor);transition: all .2s;margin:var(--${id}-pMargin) 0;padding:0;font-size:var(--${id}-fontSize);text-align:center;line-height:var(--${id}-lineHeight)}#${id} p span{padding-right:.5rem;}#${id} p.tly_word{margin:0 !important;font-size: var(--${id}-tlyricSize);line-height: var(--${id}-tlyricLineHeight);}#${id} p.color{color:var(--${id}-hilightColor);}`;
-
-
-        let nCSS = `#${id} p span.color{color:var(--${id}-hilightColor) !important}#${id} p span.now {--progress:100;color: transparent;background-clip: text;-webkit-background-clip: text;background-image:linear-gradient(to left, var(--${id}-baseColor) calc(var(--progress) * 1%),var(--${id}-hilightColor)  0%);}`;
+    function _doStyleCss() {
+        const baseCSS = `.hide-tlyric p[${_uniqueAttribute}].tly_word{display:none;}p[${_uniqueAttribute}]{color: var(--baseColor);transition: all .2s;margin:var(--pMargin) 0;padding:0;font-size:var(--fontSize);text-align:center;line-height:var(--lineHeight)}p[${_uniqueAttribute}] span{padding-right:.5rem;}p[${_uniqueAttribute}].tly_word{margin:0 !important;font-size: var(--tlyricSize);line-height: var(--tlyricLineHeight);}p[${_uniqueAttribute}].color{color:var(--hilightColor);}`;
+        const nCSS = `p[${_uniqueAttribute}] span.color{color:var(--hilightColor) !important}p[${_uniqueAttribute}] span.now {--progress:100;color: transparent;background-clip: text;-webkit-background-clip: text;background-image:linear-gradient(to left, var(--baseColor) calc(var(--progress) * 1%),var(--hilightColor)  0%);}`;
 
         const styleCss = doc.createElement('style');
         styleCss.textContent = baseCSS + nCSS
         doc.documentElement.querySelector('head').appendChild(styleCss);
     }
+
+    _doStyleCss(); // 初始化样式
 
     // 渲染歌词，并初始化歌词数据，方便后面的歌词动效的使用
     function _renderLrc(opt) {
@@ -87,6 +68,7 @@ const LrcOrLyrcKit = (function (win, doc) {
             let objTemp = {};
             let spanArr = [];
             const p = doc.createElement('p');
+            p.setAttribute(_uniqueAttribute, '');
             p.dataset.time = item.current_time;
             if (item.word_arr.length > 0) {
                 const spanTpl = doc.createDocumentFragment();
@@ -123,6 +105,7 @@ const LrcOrLyrcKit = (function (win, doc) {
             lrcTpl.appendChild(p);
             if (item.tly_word) {
                 const pTly = doc.createElement('p');
+                pTly.setAttribute(_uniqueAttribute, '');
                 pTly.innerText = item.tly_word;
                 pTly.className = 'tly_word';
                 objTemp.tlyric_node = pTly;
@@ -319,8 +302,6 @@ const LrcOrLyrcKit = (function (win, doc) {
     function _init(opt) {
         // 保存初始化参数
         _initOpt = opt;
-
-        _doStyleCss(opt.options, opt.el.id);
 
         _halfContainerH = opt.el.getBoundingClientRect().height / 2;
         // 保存歌词容器
@@ -841,15 +822,26 @@ const MusicBarControl = (function (win, doc) {
     let _moveAnId = null,
         _cNow = 0,
         _width = 0,
+        _uniqueAttribute = `data-bar-${Math.random().toString(36).substring(2, 8)}`;
         _showLyrc = 0;
 
+    function _doCSS() {
+        let normalCSS = `.progress-under[${_uniqueAttribute}],.progress-mid[${_uniqueAttribute}],.progress-top[${_uniqueAttribute}]{height:var(--bar-height);border-radius:calc(var(--bar-height) / 2);position:absolute;top:0;left:0;transform:translateY(calc(var(--pg-height) / 2));transition:all .3s}.progress-under.scale[${_uniqueAttribute}],.progress-mid.scale[${_uniqueAttribute}],.progress-top.scale[${_uniqueAttribute}]{height:calc(var(--bar-height) + .2rem);border-radius:calc(var(--bar-height) / 2 + .1rem)}.progress-under[${_uniqueAttribute}]{width:inherit;background-color:var(--bar-under-bg)}.progress-mid[${_uniqueAttribute}]{width:0%;background-color:var(--bar-mid-bg)}.progress-top[${_uniqueAttribute}]{width:0%;background-color:var(--bar-top-bg)}.slider[${_uniqueAttribute}]{width:var(--slider-size);height:var(--slider-size);border-radius:calc(var(--slider-size) / 2);background-color:var(--slider-bg);position:absolute;right:calc(var(--slider-size) / -2);top:calc(var(--slider-size) / -4);transition:all .3s}.slider[${_uniqueAttribute}].dragging{cursor:grabbing !important}.progress[${_uniqueAttribute}].dragging{cursor:grabbing !important}.progress-top[${_uniqueAttribute}].scale .slider[${_uniqueAttribute}],.slider[${_uniqueAttribute}]:hover{transform:scale(1.3);cursor:grab}`;
+
+        const style = doc.createElement('style');
+        style.textContent = normalCSS;
+        doc.documentElement.querySelector('head').appendChild(style);
+    }
+    // 处理css
+    _doCSS();
+
     function _init(opt) {
-        if (!opt.oProgressTop || !opt.oSlider || !opt.oProgress || !opt.oProgressUnder) {
-            throw new Error(`oProgressTop: 进度条或 oSlider:拖动滑块或 oProgress:总滑动条或 oProgressUnder:进度条轨道不能为空`);
+        if (!opt.oProgress) {
+            throw new Error(`oProgress:总滑动条或`);
         }
 
-        if (!(opt.oProgressTop instanceof Node) || !(opt.oSlider instanceof Node) || !(opt.oProgress instanceof Node) || !(opt.oProgressUnder instanceof Node)) {
-            throw new Error(`oProgressTop: 进度条或 oSlider:拖动滑块或 oProgress:总滑动条或 oProgressUnder:进度条轨道必须是dom元素`);
+        if (!(opt.oProgress instanceof Node)) {
+            throw new Error(`oProgress:总滑动条或`);
         }
 
         if (!(opt.progressBarCallBack instanceof Function)) {
@@ -858,7 +850,36 @@ const MusicBarControl = (function (win, doc) {
 
         opt._bound = opt.oProgress.getBoundingClientRect();
 
+        const oProgressUnder = doc.createElement('div'),
+            oProgressMid = doc.createElement('div'),
+            oProgressTop = doc.createElement('div'),
+            oSlider = doc.createElement('div');
+
+        oProgressUnder.classList.add('progress-under');
+        oProgressUnder.setAttribute(_uniqueAttribute, '');
+        oProgressMid.classList.add('progress-mid');
+        oProgressMid.setAttribute(_uniqueAttribute, '');
+        oProgressTop.classList.add('progress-top');
+        oProgressTop.setAttribute(_uniqueAttribute, '');
+        oSlider.classList.add('slider');
+        oSlider.setAttribute(_uniqueAttribute, '');
+        oProgressTop.appendChild(oSlider);
+
+        opt.oProgress.setAttribute(_uniqueAttribute, '')
+        opt.oProgress.appendChild(oProgressUnder);
+        opt.oProgress.appendChild(oProgressMid);
+        opt.oProgress.appendChild(oProgressTop);
+
+        if (opt.initWidth) {
+            oProgressTop.style.width = opt.initWidth; // 初始化长度
+        }
+
         opt._moveing = false;
+        opt.oSlider = oSlider;
+        opt.oProgressUnder = oProgressUnder;
+        opt.oProgressMid = oProgressMid;
+        opt.oProgressTop = oProgressTop;
+
 
         if (opt.el instanceof HTMLAudioElement || opt.el instanceof HTMLVideoElement) {
             // 音频播放联动

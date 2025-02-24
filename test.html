@@ -33,6 +33,13 @@
         }
 
         #lrc {
+            --baseColor: rgb(255, 255, 255, .6);
+            --hilightColor: rgb(0, 255, 127);
+            --fontSize: 1.3rem;
+            --lineHeight: 1.8rem;
+            --tlyricSize: 1rem;
+            --tlyricLineHeight: 1.6rem;
+            --pMargin: 1rem;
             width: 35rem;
             height: 65vh;
             overflow-y: auto;
@@ -133,41 +140,14 @@
             width: 35rem;
         }
 
-        .progress-box .progress-under,
-        .progress-box .progress-mid,
-        .progress-box .progress-top {
-            height: .3rem;
-            border-radius: .15rem;
-            position: absolute;
-            top: 0;
-            left: 0;
-            transform: translateY(1rem);
-            transition: all .3s;
-        }
-
-        .progress-box .progress-under.scale,
-        .progress-box .progress-mid.scale,
-        .progress-box .progress-top.scale {
-            height: .5rem;
-            border-radius: .25rem;
-        }
-
-        .progress-box .progress-under {
-            width: inherit;
-            background-color: rgb(255, 255, 255, .3);
-        }
-
-        .progress-box .progress-mid {
-            width: 0%;
-            background-color: rgb(255, 255, 255, .5);
-        }
-
-        .progress-box .progress-top {
-            width: 0%;
-            background-color: rgb(255, 255, 255);
-        }
-
         .progress-box .progress {
+            --pg-height: 2rem;
+            --bar-height: .3rem;
+            --bar-under-bg: rgb(255, 255, 255, .3);
+            --bar-mid-bg: rgb(255, 255, 255, .5);
+            --bar-top-bg: rgb(255, 255, 255);
+            --slider-size: .6rem;
+            --slider-bg: rgb(255, 255, 255);
             width: 31rem;
             height: 2rem;
             cursor: pointer;
@@ -224,35 +204,6 @@
             padding: .2rem .4rem;
         }
 
-        .progress-box .progress-top .slider {
-            width: .6rem;
-            height: .6rem;
-            border-radius: .3rem;
-            background-color: rgb(255, 255, 255, 1);
-            position: absolute;
-            right: -.3rem;
-            top: -.15rem;
-            transition: all .3s;
-        }
-
-        .progress-box:hover .progress-top .slider {
-            opacity: 1;
-        }
-
-        .progress-box .progress-top .slider.dragging {
-            cursor: grabbing !important;
-        }
-
-        .progress-box .progress.dragging {
-            cursor: grabbing !important;
-        }
-
-        .progress-box .progress-top.scale .slider,
-        .progress-box .progress-top .slider:hover {
-            transform: scale(1.3);
-            cursor: grab;
-        }
-
         .progress-box .time {
             width: 31rem;
             font-size: 1rem;
@@ -285,6 +236,7 @@
         .progress-box.volume .progress {
             width: 18rem;
             transform: translateX(1rem);
+            --bar-top-bg: rgb(56, 189, 248);
         }
 
         .progress-box.volume .icon {
@@ -340,11 +292,6 @@
 
     <div class="progress-box">
         <div class="progress">
-            <div class="progress-under"></div>
-            <div class="progress-mid"></div>
-            <div class="progress-top">
-                <div class="slider"></div>
-            </div>
             <div id="showLyrc"></div>
         </div>
         <div class="time">
@@ -370,10 +317,6 @@
 
     <div class="progress-box volume">
         <div class="progress">
-            <div class="progress-under"></div>
-            <div class="progress-top" style="width: 50%">
-                <div class="slider"></div>
-            </div>
             <div>
                 <svg class="icon" viewBox="0 0 1024 1024">
                     <path class="no-vol"
@@ -387,8 +330,6 @@
         </div>
     </div>
 
-    <!-- <button id="changCSS" class="normal-btn">切换歌词动效</button> -->
-
     <audio src="music/go-beyond.mp3" preload="metadata"></audio>
 
     <script src="./music-kit/music-kit.js"></script>
@@ -397,29 +338,16 @@
     <script>
         // 实现控制
         const oPlayBtn = document.getElementById('playBtn'),
-            // oChangeCSS = document.getElementById('changCSS'),
             oTranslation = document.getElementById('translation'),
-            oShowLyrc = document.getElementById('showLyrc'),
             oAudio = document.querySelector('audio'),
             oProgressBox = document.querySelector('.progress-box'),
             oProgressBoxVolume = document.querySelector('.progress-box.volume'),
-            oProgressVolume = oProgressBoxVolume.querySelector('.progress'),
-            oProgressUnderVolume = oProgressBoxVolume.querySelector('.progress-under'),
-            oProgressTopVolume = oProgressBoxVolume.querySelector('.progress-top'),
-            oSliderVolume = oProgressBoxVolume.querySelector('.slider'),
             oSliderVolumeSVG = oProgressBoxVolume.querySelector('.icon'),
             oSliderVolumeVol = oSliderVolumeSVG.querySelector('.vol'),
             oSliderVolumeNoVol = oSliderVolumeSVG.querySelector('.no-vol'),
             oCircle = oPlayBtn.querySelector('.circle'),
             oPlay = oPlayBtn.querySelector('.play'),
             oPause = oPlayBtn.querySelector('.pause'),
-            oProgress = oProgressBox.querySelector('.progress'),
-            oNowTime = oProgressBox.querySelector('.time .now'),
-            oTotal = oProgressBox.querySelector('.time .total'),
-            oProgressUnder = oProgress.querySelector('.progress-under'),
-            oProgressMid = oProgress.querySelector('.progress-mid'),
-            oProgressTop = oProgress.querySelector('.progress-top'),
-            oSlider = oProgressTop.querySelector('.slider'),
             oCLen = oCircle.getTotalLength();
         // 设置动态参数
         oAudio.src = `music/go-beyond.mp3?t=${Date.now()}`;
@@ -474,16 +402,6 @@
 
         const options = {
             el: document.getElementById('lrc'),
-            options: {
-                baseColor: 'rgb(255, 255, 255, .6)',
-                hilightColor: 'rgb(0, 255, 127)',
-                fontSize: '1.3rem',
-                lineHeight: '1.8rem',
-                tlyricSize: '1rem',
-                tlyricLineHeight: '1.6rem',
-                hilightBgColor: 'rgb(204, 204, 204, .2)',
-                pMargin: '1rem'
-            },
             lineWidth: lineWidth,
             bindAudio: oAudio,
             bindPlacePlay: {
@@ -539,10 +457,8 @@
         // 初始化音量调节器
         oAudio.volume = 0.5; // 初始化音量
         MusicBarControl.init({
-            oSlider: oSliderVolume,
-            oProgress: oProgressVolume,
-            oProgressUnder: oProgressUnderVolume,
-            oProgressTop: oProgressTopVolume,
+            oProgress: oProgressBoxVolume.querySelector('.progress'),
+            initWidth: '50%',
             vibrate: 15,
             progressBarCallBack: function (progress) {
                 if (progress < 0.1 && progress > 0.009) {
@@ -563,16 +479,10 @@
         // 初始化音乐进度条
         MusicBarControl.init({
             el: oAudio,
-            oPlay: oPlay,
-            oPause: oPause,
-            oTotal: oTotal,
-            oNowTime: oNowTime,
-            oSlider: oSlider,
-            oProgress: oProgress,
-            oProgressMid: oProgressMid,
-            oProgressUnder: oProgressUnder,
-            oProgressTop: oProgressTop,
-            oShowLyrc: oShowLyrc,
+            oTotal: oProgressBox.querySelector('.time .total'),
+            oNowTime: oProgressBox.querySelector('.time .now'),
+            oProgress: oProgressBox.querySelector('.progress'),
+            oShowLyrc: document.getElementById('showLyrc'),
             vibrate: 15, // 开启震动
             progressBarCallBack: function (progress) {
                 if (Math.floor(progress * 100) !== 0) {
