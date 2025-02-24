@@ -9,7 +9,7 @@
     "reserved": [
       "e",
       "LrcOrLyrcKit",
-      "MusicControl"
+      "MusicBarControl"
     ]
   },
   "output": {
