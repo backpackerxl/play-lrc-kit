@@ -837,11 +837,11 @@ const MusicBarControl = (function (win, doc) {
 
     function _init(opt) {
         if (!opt.oProgress) {
-            throw new Error(`oProgress:总滑动条或`);
+            throw new Error(`oProgress:总滑动条不存在`);
         }
 
         if (!(opt.oProgress instanceof Node)) {
-            throw new Error(`oProgress:总滑动条或`);
+            throw new Error(`oProgress:总滑动条不是一个dom节点`);
         }
 
         if (!(opt.progressBarCallBack instanceof Function)) {
