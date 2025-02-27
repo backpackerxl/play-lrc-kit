@@ -13,7 +13,6 @@
             flex-direction: column;
             position: relative;
             background: radial-gradient(at right center, rgb(56, 189, 248), rgb(49, 46, 129)) no-repeat;
-            backdrop-filter: blur(1rem);
             box-sizing: border-box;
             -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
             -webkit-touch-callout: none;
@@ -79,8 +78,9 @@
             justify-content: space-between;
             user-select: none;
             -webkit-user-select: none;
+            background-color: transparent;
             top: 9rem;
-            transition: all .2s;
+            transition: all .1s;
             z-index: -999;
         }
 
@@ -409,8 +409,8 @@
                 timeTag: document.querySelector('#startPlay .time'),
                 playTag: document.querySelector('#startPlay svg'),
                 lineDiv: document.querySelector('#startPlay .line'),
-                pcTimer: 1200, // PC端延迟回弹ms
-                mbTimer: 1200, // 移动端延迟回弹ms
+                pcTimer: 900, // PC端延迟回弹ms
+                mbTimer: 900, // 移动端延迟回弹ms
                 timeTagTimer: 6000, // 点击播放的样式停留时长ms
                 startMoveCallBack: function () {
                     this.startPlay.classList.remove('show'); // 隐藏背景

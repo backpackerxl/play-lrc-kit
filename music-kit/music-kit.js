@@ -23,14 +23,14 @@ const LrcOrLyrcKit = (function (win, doc) {
         _splitLetter = false,
         _halfContainerH = 0,
         _uniqueAttribute = `data-lrc-${Math.random().toString(36).substring(2, 8)}`;
-        _audio = null;
+    _audio = null;
 
     function _doStyleCss() {
         const baseCSS = `.hide-tlyric p[${_uniqueAttribute}].tly_word{display:none;}p[${_uniqueAttribute}]{color: var(--baseColor);transition: all .2s;margin:var(--pMargin) 0;padding:0;font-size:var(--fontSize);text-align:center;line-height:var(--lineHeight)}p[${_uniqueAttribute}] span{padding-right:.5rem;}p[${_uniqueAttribute}].tly_word{margin:0 !important;font-size: var(--tlyricSize);line-height: var(--tlyricLineHeight);}p[${_uniqueAttribute}].color{color:var(--hilightColor);}`;
         const nCSS = `p[${_uniqueAttribute}] span.color{color:var(--hilightColor) !important}p[${_uniqueAttribute}] span.now {--progress:100;color: transparent;background-clip: text;-webkit-background-clip: text;background-image:linear-gradient(to left, var(--baseColor) calc(var(--progress) * 1%),var(--hilightColor)  0%);}`;
-
+        const moveJump = `p[${_uniqueAttribute}].jump{animation-duration: 200ms;animation-delay: calc(var(--delay) * 1ms);animation-timing-function: ease-in-out;animation-name: lyrcJump;animation-fill-mode: forwards;}@keyframes lyrcJump {0%,100%{transform: translateY(0);}50%{transform:translateY(-1rem);}}`;
         const styleCss = doc.createElement('style');
-        styleCss.textContent = baseCSS + nCSS
+        styleCss.textContent = baseCSS + nCSS + moveJump;
         doc.documentElement.querySelector('head').appendChild(styleCss);
     }
 
@@ -64,7 +64,7 @@ const LrcOrLyrcKit = (function (win, doc) {
         func(lyric_data, tlyric_lyric);
         // 歌词文档碎片容器
         const lrcTpl = doc.createDocumentFragment();
-        _song_word.forEach(item => {
+        _song_word.forEach((item, idx) => {
             let objTemp = {};
             let spanArr = [];
             const p = doc.createElement('p');
@@ -111,6 +111,7 @@ const LrcOrLyrcKit = (function (win, doc) {
                 objTemp.tlyric_node = pTly;
                 p.appendChild(pTly);
             }
+            objTemp.idx = idx;
             objTemp.target_node = p;
             objTemp.span_arr = spanArr;
             objTemp.time = item.current_time;
@@ -408,6 +409,7 @@ const LrcOrLyrcKit = (function (win, doc) {
                 if (_startPlay) {
                     _startPlay.classList.remove(_showTag);
                 }
+                _moveJump(_audio.currentTime);
                 _lrcMove(300, _oldNode.target_node);
             }
         } else if (targetNode) {
@@ -454,6 +456,39 @@ const LrcOrLyrcKit = (function (win, doc) {
         }
         // 开始动画
         _textMoveAnId = requestAnimationFrame(step);
+    }
+
+    let _moveJumpNodeArr = [];
+
+    /** 
+     * 处理歌词移动动画
+     **/
+    function _moveJump(target) {
+        if (Number.isNaN(target)) {
+            return;
+        }
+
+        _moveJumpNodeArr.forEach(node => {
+            node.style.setProperty("--delay", 0);
+            node.classList.remove('jump');
+        });
+
+        _moveJumpNodeArr = [];
+
+        let node = _lrcNodeArr.reduce((prev, curr) => {
+            return Math.abs(curr.time - target) < Math.abs(prev.time - target) && curr.time < target ? curr : prev;
+        });
+
+        let idx = node.idx,
+            lastIdx = Math.min(_lrcNodeArr.length, idx + 6);
+
+        let delay = -200;
+        for (let i = idx; i < lastIdx; i++) {
+            _lrcNodeArr[i].target_node.style.setProperty("--delay", delay += 200);
+            _lrcNodeArr[i].target_node.classList.add('jump');
+            _moveJumpNodeArr.push(_lrcNodeArr[i].target_node);
+        }
+        console.log(_moveJumpNodeArr);
     }
 
 
@@ -574,7 +609,7 @@ const LrcOrLyrcKit = (function (win, doc) {
                 cancelAnimationFrame(animateId); // 取消动画
                 _unMoveCallBack && _unMoveCallBack(); // 卸载参照物
                 _clickCallBack && _clickCallBack(); //调用点击后的回放
-                _targetY = _lrcContainer.scrollTop + _firstMp;
+                _targetY = _lrcContainer.scrollTop;
                 _moveTag = true;
             });
         }
@@ -616,14 +651,13 @@ const LrcOrLyrcKit = (function (win, doc) {
 
         // 清除滚动提示
         function _clearTips() {
-            cancelAnimationFrame(animateId); // 取消动画
             _unMoveCallBack && _unMoveCallBack(); // 卸载参照物
+            cancelAnimationFrame(animateId); // 取消动画
             _moveTag = true;
-            _smoothScroll(
-                _lrcContainer,
-                _targetY,
-                100
-            );
+            _targetY = _lrcContainer.scrollTop;
+            if (_oldNode) {
+                _lrcMove(100, _oldNode.target_node);
+            }
         }
 
         // 监听鼠标滚轮事件，实现定点播放
@@ -763,7 +797,6 @@ const LrcOrLyrcKit = (function (win, doc) {
             nodeArr = [...prevNodeArr, { ...node, flag: true }, ...suffixNodeArr];
         }
 
-        console.log(nodeArr)
         const pTpl = doc.createDocumentFragment();
 
         nodeArr.forEach(item => {
@@ -823,7 +856,7 @@ const MusicBarControl = (function (win, doc) {
         _cNow = 0,
         _width = 0,
         _uniqueAttribute = `data-bar-${Math.random().toString(36).substring(2, 8)}`;
-        _showLyrc = 0;
+    _showLyrc = 0;
 
     function _doCSS() {
         let normalCSS = `.progress-under[${_uniqueAttribute}],.progress-mid[${_uniqueAttribute}],.progress-top[${_uniqueAttribute}]{height:var(--bar-height);border-radius:calc(var(--bar-height) / 2);position:absolute;top:0;left:0;transform:translateY(calc(var(--pg-height) / 2));transition:all .3s}.progress-under.scale[${_uniqueAttribute}],.progress-mid.scale[${_uniqueAttribute}],.progress-top.scale[${_uniqueAttribute}]{height:calc(var(--bar-height) + .2rem);border-radius:calc(var(--bar-height) / 2 + .1rem)}.progress-under[${_uniqueAttribute}]{width:inherit;background-color:var(--bar-under-bg)}.progress-mid[${_uniqueAttribute}]{width:0%;background-color:var(--bar-mid-bg)}.progress-top[${_uniqueAttribute}]{width:0%;background-color:var(--bar-top-bg)}.slider[${_uniqueAttribute}]{width:var(--slider-size);height:var(--slider-size);border-radius:calc(var(--slider-size) / 2);background-color:var(--slider-bg);position:absolute;right:calc(var(--slider-size) / -2);top:calc(var(--slider-size) / -4);transition:all .3s}.slider[${_uniqueAttribute}].dragging{cursor:grabbing !important}.progress[${_uniqueAttribute}].dragging{cursor:grabbing !important}.progress-top[${_uniqueAttribute}].scale .slider[${_uniqueAttribute}],.slider[${_uniqueAttribute}]:hover{transform:scale(1.3);cursor:grab}`;
