@@ -16,11 +16,11 @@ const LrcOrLyrcKit = (function (win, doc) {
         _animationId = null,
         _targetY = 0,
         _oldNode = null,
-        _firstMp = 0,
         _oNowSpan = null,
         _nowDuration = 0,
         _textMoveAnId = null,
         _splitLetter = false,
+        _circleAnimateArr = [],
         _halfContainerH = 0,
         _uniqueAttribute = `data-lrc-${Math.random().toString(36).substring(2, 8)}`;
     _audio = null;
@@ -144,7 +144,6 @@ const LrcOrLyrcKit = (function (win, doc) {
         el.appendChild(lrcTpl);
         // 计算margin值
         _mH = win.getComputedStyle(_lrcNodeArr[0].target_node).marginBottom.replace('px', '') * 2;
-        _firstMp = win.getComputedStyle(_lrcNodeArr[0].target_node).getPropertyValue('margin-top').replace('px', '') * 1;
         _addBr();
         if (_audio.currentTime !== 0) {
             _toCurrentLyrc(_audio.currentTime); // 调一次定位函数
@@ -480,8 +479,6 @@ const LrcOrLyrcKit = (function (win, doc) {
         _textMoveAnId = requestAnimationFrame(step);
     }
 
-    let circleAnimateArr = [];
-
     /**
      * 歌词滚动
      * 滚动参数
@@ -490,7 +487,7 @@ const LrcOrLyrcKit = (function (win, doc) {
         // 处理等待动画
         if (target.dataset.duration) {
             // 清除动画
-            circleAnimateArr.forEach(an =>{
+            _circleAnimateArr.forEach(an =>{
                 an.cancel();
             });
             let diff = +target.dataset.duration - 1.3;
@@ -503,7 +500,7 @@ const LrcOrLyrcKit = (function (win, doc) {
                     fill: "forwards",
                     delay: diff * 1000 - 500 * k
                 })
-                circleAnimateArr.push(an);
+                _circleAnimateArr.push(an);
             });
         }
         const bound = target.getBoundingClientRect();
