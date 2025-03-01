@@ -44,18 +44,18 @@ const LrcOrLyrcKit = (function (win, doc) {
         const { lyric_data, tlyric_lyric, func, splitLetter } = opt;
 
         if (!el || !lyric_data || !func) {
-            throw new Error("渲染视图的挂载点或歌词数据或歌词处理函数不能为空");
+            throw new Error("The mount el or lyric data or lyric processing func for rendering views cannot be empty.");
         }
 
         _splitLetter = splitLetter || false;
         if (!(el instanceof Node)) {
-            throw new Error('el不是一个元素节点');
+            throw new Error('el not an element node.');
         }
         // 清空歌词
         el.innerText = '';
 
         if (!(func instanceof Function)) {
-            throw new Error('func不是一个可执行函数');
+            throw new Error('func not a function.');
         }
 
         // 处理lyrc歌词数据
@@ -332,12 +332,12 @@ const LrcOrLyrcKit = (function (win, doc) {
         if (opt.bindAudio) {
             _bindAudio({ el: opt.bindAudio })
         } else {
-            console.warn("未设置audio控件无法实现歌词随歌曲滚动高亮！！！")
+            console.warn("No setting audio control, so it is impossible to achieve lyrics scrolling and highlighting along with the song.")
         }
         if (opt.bindPlacePlay) {
             _bindPlacePlay(opt.bindPlacePlay);
         } else {
-            console.warn("未设置点击播放的配置将无法实现滚动到指定歌词点击播放的功能！！！")
+            console.warn("If the click to play configuration is not set, the function of scrolling to the specified lyrics and clicking to play cannot be achieved.")
         }
     }
 
@@ -346,11 +346,11 @@ const LrcOrLyrcKit = (function (win, doc) {
     /** 歌词绑定播放器 */
     function _bindAudio(opt) {
         if (!opt.el) {
-            throw new Error("el不存在");
+            throw new Error("Not find el properties.");
         }
 
         if (!(opt.el instanceof HTMLAudioElement)) {
-            throw new Error('el不是一个html Audio播放器');
+            throw new Error('el not a HTML Audio player.');
         }
 
         _audio = opt.el;
@@ -570,25 +570,25 @@ const LrcOrLyrcKit = (function (win, doc) {
         if (opt.startMoveCallBack && opt.startMoveCallBack instanceof Function) {
             _startMoveCallBack = opt.startMoveCallBack.bind(opt);
         } else {
-            console.warn('设置的歌词滚动开始执行的回调函数失败，将无法在滚动歌词的过程中显示点击播放的参照物！！！');
+            console.warn('The callback function for starting the scrolling of the set lyrics has failed, and the reference object for clicking to play cannot be displayed during the scrolling of the lyrics.');
         }
 
         if (opt.onMoveCallBack && opt.onMoveCallBack instanceof Function) {
             _onMoveCallBack = opt.onMoveCallBack.bind(opt);
         } else {
-            console.warn('设置的歌词滚动中执行的回调函数失败，将无法实现滚动歌词与点击参照物的实时联动！！！');
+            console.warn('The callback function executed during the set lyrics scrolling has failed, and real-time linkage between scrolling lyrics and clicking on reference objects cannot be achieved.');
         }
 
         if (opt.stopMoveCallBack && opt.stopMoveCallBack instanceof Function) {
             _stopMoveCallBack = opt.stopMoveCallBack.bind(opt);
         } else {
-            console.warn('设置的歌词滚动结束后执行的回调函数失败，滚动结束后不会有任何操作！！！');
+            console.warn('The callback function executed after the set lyrics scroll ends failed, and there will be no operation after the scroll ends.');
         }
 
         if (opt.unMoveCallBack && opt.unMoveCallBack instanceof Function) {
             _unMoveCallBack = opt.unMoveCallBack.bind(opt);
         } else {
-            console.warn('设置的歌词滚动完成后执行的回调函数失败，滚动参照物将不会被释放！！！');
+            console.warn('The callback function executed after the set lyrics scroll is completed fails, and the scrolling reference will not be released.');
         }
 
         if (opt.clickCallBack && opt.clickCallBack instanceof Function) {
@@ -881,15 +881,15 @@ const MusicBarControl = (function (win, doc) {
 
     function _init(opt) {
         if (!opt.oProgress) {
-            throw new Error(`oProgress:总滑动条不存在`);
+            throw new Error('Not find oProgress properties');
         }
 
         if (!(opt.oProgress instanceof Node)) {
-            throw new Error(`oProgress:总滑动条不是一个dom节点`);
+            throw new Error(`${opt.oProgress} not a HTML node`);
         }
 
         if (!(opt.progressBarCallBack instanceof Function)) {
-            throw new Error(`progressBarCallBack: ${opt.progressBarCallBack}不是个函数`);
+            throw new Error(`${opt.progressBarCallBack} not a function.`);
         }
 
         opt._bound = opt.oProgress.getBoundingClientRect();
