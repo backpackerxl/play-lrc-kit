@@ -26,11 +26,10 @@ const LrcOrLyrcKit = (function (win, doc) {
     _audio = null;
 
     function _doStyleCss() {
-        const baseCSS = `.hide-tlyric p[${_uniqueAttribute}].tly_word{display:none;}p[${_uniqueAttribute}]{color: var(--baseColor);transition: all .2s;margin:var(--pMargin) 0;padding:0;font-size:var(--fontSize);text-align:center;line-height:var(--lineHeight)}p[${_uniqueAttribute}] span{padding-right:.5rem;}p[${_uniqueAttribute}].tly_word{margin:0 !important;font-size: var(--tlyricSize);line-height: var(--tlyricLineHeight);}p[${_uniqueAttribute}].color{color:var(--hilightColor);}`;
+        const baseCSS = `.hide-tlyric p[${_uniqueAttribute}].tly_word{display:none;}p[${_uniqueAttribute}]{color:var(--baseColor);transition: all .2s;margin:var(--pMargin) 0;padding:0;font-size:var(--fontSize);text-align:var(--textAlign);line-height:var(--lineHeight)}p[${_uniqueAttribute}] span{padding-right:.5rem;}p[${_uniqueAttribute}].tly_word{margin:0 !important;font-size: var(--tlyricSize);line-height:var(--tlyricLineHeight)}p[${_uniqueAttribute}].color{color:var(--hilightColor);}p[${_uniqueAttribute}] span.circle{display: none;}p[${_uniqueAttribute}].now span.circle{display: inline-block;width: var(--circleSize);height: var(--circleSize);border-radius: 50%;background-color: var(--baseColor);margin: 0 .4rem;padding: 0 !important;animation: lrc-bounce 500ms infinite alternate;animation-delay: calc(var(--delay) * 1ms);}@keyframes lrc-bounce {to{opacity: .1;transform: translateY(-.5rem);}}`;
         const nCSS = `p[${_uniqueAttribute}] span.color{color:var(--hilightColor) !important}p[${_uniqueAttribute}] span.now {--progress:100;color: transparent;background-clip: text;-webkit-background-clip: text;background-image:linear-gradient(to left, var(--baseColor) calc(var(--progress) * 1%),var(--hilightColor)  0%);}`;
-        const moveJump = `p[${_uniqueAttribute}].jump{animation-duration: 200ms;animation-delay: calc(var(--delay) * 1ms);animation-timing-function: ease-in-out;animation-name: lyrcJump;animation-fill-mode: forwards;}@keyframes lyrcJump {0%,100%{transform: translateY(0);}50%{transform:translateY(-1rem);}}`;
         const styleCss = doc.createElement('style');
-        styleCss.textContent = baseCSS + nCSS + moveJump;
+        styleCss.textContent = baseCSS + nCSS;
         doc.documentElement.querySelector('head').appendChild(styleCss);
     }
 
@@ -64,13 +63,17 @@ const LrcOrLyrcKit = (function (win, doc) {
         func(lyric_data, tlyric_lyric);
         // 歌词文档碎片容器
         const lrcTpl = doc.createDocumentFragment();
+        let son_len = _song_word.length - 1;
         _song_word.forEach((item, idx) => {
             let objTemp = {};
             let spanArr = [];
+            let last_time = item.current_time;
             const p = doc.createElement('p');
             p.setAttribute(_uniqueAttribute, '');
             p.dataset.time = item.current_time;
             if (item.word_arr.length > 0) {
+                let wd = item.word_arr[item.word_arr.length - 1];
+                last_time = wd[0][1] + wd[0][2] / 1000;
                 const spanTpl = doc.createDocumentFragment();
                 item.word_arr.forEach(word => {
                     const span = doc.createElement('span');
@@ -116,6 +119,26 @@ const LrcOrLyrcKit = (function (win, doc) {
             objTemp.span_arr = spanArr;
             objTemp.time = item.current_time;
             _lrcNodeArr.push(objTemp);
+
+            let diff = _song_word[Math.min(son_len, idx + 1)].current_time - last_time;
+            if (diff > 6) {
+                const oP = doc.createElement('p');
+                for (let k = 0; k < 3; k++) {
+                    const oSpan = doc.createElement('span');
+                    oSpan.classList.add("circle");
+                    oSpan.style.setProperty("--delay", 180 * k);
+                    oP.appendChild(oSpan);
+                }
+                oP.dataset.time = item.current_time + 1;
+                oP.dataset.duration = diff;
+                oP.setAttribute(_uniqueAttribute, '');
+                lrcTpl.appendChild(oP);
+                _lrcNodeArr.push({
+                    target_node: oP,
+                    span_arr: [],
+                    time: item.current_time + 1
+                });
+            }
         });
 
         el.appendChild(lrcTpl);
@@ -409,7 +432,6 @@ const LrcOrLyrcKit = (function (win, doc) {
                 if (_startPlay) {
                     _startPlay.classList.remove(_showTag);
                 }
-                _moveJump(_audio.currentTime);
                 _lrcMove(300, _oldNode.target_node);
             }
         } else if (targetNode) {
@@ -458,45 +480,32 @@ const LrcOrLyrcKit = (function (win, doc) {
         _textMoveAnId = requestAnimationFrame(step);
     }
 
-    let _moveJumpNodeArr = [];
-
-    /** 
-     * 处理歌词移动动画
-     **/
-    function _moveJump(target) {
-        if (Number.isNaN(target)) {
-            return;
-        }
-
-        _moveJumpNodeArr.forEach(node => {
-            node.style.setProperty("--delay", 0);
-            node.classList.remove('jump');
-        });
-
-        _moveJumpNodeArr = [];
-
-        let node = _lrcNodeArr.reduce((prev, curr) => {
-            return Math.abs(curr.time - target) < Math.abs(prev.time - target) && curr.time < target ? curr : prev;
-        });
-
-        let idx = node.idx,
-            lastIdx = Math.min(_lrcNodeArr.length, idx + 6);
-
-        let delay = -200;
-        for (let i = idx; i < lastIdx; i++) {
-            _lrcNodeArr[i].target_node.style.setProperty("--delay", delay += 200);
-            _lrcNodeArr[i].target_node.classList.add('jump');
-            _moveJumpNodeArr.push(_lrcNodeArr[i].target_node);
-        }
-        console.log(_moveJumpNodeArr);
-    }
-
+    let circleAnimateArr = [];
 
     /**
      * 歌词滚动
      * 滚动参数
      */
     function _lrcMove(sn, target) {
+        // 处理等待动画
+        if (target.dataset.duration) {
+            // 清除动画
+            circleAnimateArr.forEach(an =>{
+                an.cancel();
+            });
+            let diff = +target.dataset.duration - 1.3;
+            target.querySelectorAll('span').forEach((oSpan, k) => {
+                let an = oSpan.animate([
+                    { opacity: 0 }
+                ], {
+                    easing: "ease",
+                    duration: 80,
+                    fill: "forwards",
+                    delay: diff * 1000 - 500 * k
+                })
+                circleAnimateArr.push(an);
+            });
+        }
         const bound = target.getBoundingClientRect();
         _targetY += bound.top - _halfContainerH + bound.height;
         _smoothScroll(

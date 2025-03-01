@@ -13,7 +13,7 @@
     ]
   },
   "output": {
-    "preamble": "/**\n * @author: backpackerxl 2025/2/25\n * @description: 这是一个歌词渲染工具&音乐播放器控件控制工具\n**/",
+    "preamble": "/**\n * @author: backpackerxl 2025/3/1\n * @description: 这是一个歌词渲染工具&音乐播放器控件控制工具\n**/",
     "comments": false
   }
 }
