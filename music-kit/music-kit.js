@@ -26,7 +26,7 @@ const LrcOrLyrcKit = (function (win, doc) {
     _audio = null;
 
     function _doStyleCss() {
-        const baseCSS = `.hide-tlyric p[${_uniqueAttribute}].tly_word{display:none;}p[${_uniqueAttribute}]{color:var(--baseColor);transition: all .2s;margin:var(--pMargin) 0;padding:0;font-size:var(--fontSize);text-align:var(--textAlign);line-height:var(--lineHeight)}p[${_uniqueAttribute}] span{padding-right:.5rem;}p[${_uniqueAttribute}].tly_word{margin:0 !important;font-size: var(--tlyricSize);line-height:var(--tlyricLineHeight)}p[${_uniqueAttribute}].color{color:var(--hilightColor);}p[${_uniqueAttribute}] span.circle{display: none;}p[${_uniqueAttribute}].now span.circle{display: inline-block;width: var(--circleSize);height: var(--circleSize);border-radius: 50%;background-color: var(--baseColor);margin: 0 .4rem;padding: 0 !important;animation: lrc-bounce 500ms infinite alternate;animation-delay: calc(var(--delay) * 1ms);}@keyframes lrc-bounce {to{opacity: .1;transform: translateY(-.5rem);}}`;
+        const baseCSS = `.hide-tlyric p[${_uniqueAttribute}].tly_word{display:none;}p[${_uniqueAttribute}]{color:var(--baseColor);transition: all .2s;margin:var(--pMargin) 0;padding:0;font-size:var(--fontSize);text-align:var(--textAlign);line-height:var(--lineHeight)}p[${_uniqueAttribute}] span{padding-right:.5rem;}p[${_uniqueAttribute}].tly_word{margin:0 !important;font-size: var(--tlyricSize);line-height:var(--tlyricLineHeight)}p[${_uniqueAttribute}].color{color:var(--hilightColor);}p[${_uniqueAttribute}] span.circle{display: none;}p[${_uniqueAttribute}].now span.circle{display: inline-block;width: var(--circleSize);height: var(--circleSize);border-radius: 50%;background-color: var(--baseColor);margin: 0 .4rem;padding: 0 !important;animation: lrc-bounce 500ms infinite alternate;animation-delay: calc(var(--delay) * 1ms);}@keyframes lrc-bounce {to{opacity: .1;transform: translateY(-.5rem) scale(1.2);}}`;
         const nCSS = `p[${_uniqueAttribute}] span.color{color:var(--hilightColor) !important}p[${_uniqueAttribute}] span.now {--progress:100;color: transparent;background-clip: text;-webkit-background-clip: text;background-image:linear-gradient(to left, var(--baseColor) calc(var(--progress) * 1%),var(--hilightColor)  0%);}`;
         const styleCss = doc.createElement('style');
         styleCss.textContent = baseCSS + nCSS;
@@ -48,7 +48,6 @@ const LrcOrLyrcKit = (function (win, doc) {
         }
 
         _splitLetter = splitLetter || false;
-
         if (!(el instanceof Node)) {
             throw new Error('el不是一个元素节点');
         }
@@ -73,7 +72,7 @@ const LrcOrLyrcKit = (function (win, doc) {
             p.dataset.time = item.current_time;
             if (item.word_arr.length > 0) {
                 let wd = item.word_arr[item.word_arr.length - 1];
-                last_time = wd[0][1] + wd[0][2] / 1000;
+                last_time = (wd[0][0] + wd[0][1]) / 1000;
                 const spanTpl = doc.createDocumentFragment();
                 item.word_arr.forEach(word => {
                     const span = doc.createElement('span');
@@ -129,8 +128,8 @@ const LrcOrLyrcKit = (function (win, doc) {
                     oSpan.style.setProperty("--delay", 180 * k);
                     oP.appendChild(oSpan);
                 }
-                oP.dataset.time = item.current_time + 1;
-                oP.dataset.duration = diff;
+                oP.dataset.time = last_time + 1;
+                oP.dataset.duration = diff.toFixed(2);
                 oP.setAttribute(_uniqueAttribute, '');
                 lrcTpl.appendChild(oP);
                 _lrcNodeArr.push({
@@ -487,7 +486,7 @@ const LrcOrLyrcKit = (function (win, doc) {
         // 处理等待动画
         if (target.dataset.duration) {
             // 清除动画
-            _circleAnimateArr.forEach(an =>{
+            _circleAnimateArr.forEach(an => {
                 an.cancel();
             });
             let diff = +target.dataset.duration - 1.3;
@@ -631,13 +630,19 @@ const LrcOrLyrcKit = (function (win, doc) {
             let nowLine, targetRectHeight;
 
             function findPToLight() {
-                for (const line of _lrcNodeArr) {
-                    const lineRect = line.target_node.getBoundingClientRect();
-                    if (lineRect.top > targetRectTop && lineRect.bottom - lineRect.height < targetRectBottom) {
-                        nowLine = line;
-                        targetRectHeight = lineRect.height + _mH;
-                        moveY = _lrcContainer.scrollTop + lineRect.top - targetRectTop + lineRect.height / 2 - targetRectHeight / 2;
-                        break;
+                for (let i = 0; i <= _lrcNodeArr.length; i++) {
+                    let line = _lrcNodeArr[i];
+                    if (line) {
+                        if (line.target_node.dataset.duration) {
+                            line = _lrcNodeArr[Math.min(_lrcNodeArr.length - 1, i + 1)];
+                        }
+                        const lineRect = line.target_node.getBoundingClientRect();
+                        if (lineRect.top > targetRectTop && lineRect.bottom - lineRect.height < targetRectBottom) {
+                            nowLine = line;
+                            targetRectHeight = lineRect.height + _mH;
+                            moveY = _lrcContainer.scrollTop + lineRect.top - targetRectTop + lineRect.height / 2 - targetRectHeight / 2;
+                            break;
+                        }
                     }
                 }
 
