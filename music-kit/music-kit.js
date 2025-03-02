@@ -763,9 +763,9 @@ const LrcOrLyrcKit = (function (win, doc) {
             });
         }
         let node = _lrcNodeArr.reduce((prev, curr) => {
-            return Math.abs(curr.time - target) < Math.abs(prev.time - target) && curr.time < target ? curr : prev;
+            return Math.abs(curr.time - target) < Math.abs(prev.time - target) && curr.time < target && !curr.target_node.dataset.duration ? curr : prev;
         });
-
+        console.log(_lrcContainer.scrollTop);
         node.span_arr.forEach(spanNode => {
             if (spanNode.stm < target) {
                 spanNode.span.classList.add('color');
