@@ -19,7 +19,6 @@
             -webkit-touch-callout: none;
             width: 100%;
             height: 100vh;
-            padding-top: 6rem;
         }
 
         .top {
@@ -43,8 +42,9 @@
             --pMargin: 1rem;
             --textAlign: center;
             --circleSize: .6rem;
+            --lrcHeight: 40rem;
             width: 35rem;
-            height: 65vh;
+            height: var(--lrcHeight);
             overflow-y: auto;
             overflow-x: hidden;
             scrollbar-width: none;
@@ -56,15 +56,6 @@
             font-weight: 500;
             letter-spacing: .05rem;
         }
-
-        #lrc p:first-child {
-            margin-top: 6rem;
-        }
-
-        #lrc p:last-child {
-            margin-bottom: 40rem;
-        }
-
 
         #lrc::-webkit-scrollbar {
             display: none;
@@ -448,13 +439,13 @@
         }
 
         // 初始化逐字歌词容器
-        LrcOrLyrcKit.init(options);
+        const render = LrcOrLyrcKit.init(options);
         // 渲染歌词
-        LrcOrLyrcKit.renderLrc({
+        render.renderLrc({
             lyric_data: data.yrc.lyric,
             tlyric_lyric: data.ytlrc.lyric,
             splitLetter: false, // 是否分割英文歌词的每一个字母
-            func: LrcOrLyrcKit.doYrcLyric,
+            func: render.doYrcLyric,
         });
 
         // 初始化音量调节器
@@ -498,7 +489,7 @@
 
         oTranslation.addEventListener('click', function () {
             // 显示或隐藏翻译，默认显示
-            LrcOrLyrcKit.translation();
+            render.translation();
             if (navigator.vibrate) {
                 navigator.vibrate(10);
             }

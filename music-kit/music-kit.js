@@ -9,12 +9,10 @@ const LrcOrLyrcKit = (function (win, doc) {
         _lrcNodeArr = [], // 歌词容器
         _lrcContainer = null,
         _initOpt = null,
-        _mH = 0,
         _startPlay = null,
         _showTag = 'show',
         _moveTag = true,
         _animationId = null,
-        _targetY = 0,
         _oldNode = null,
         _oNowSpan = null,
         _nowDuration = 0,
@@ -22,11 +20,11 @@ const LrcOrLyrcKit = (function (win, doc) {
         _splitLetter = false,
         _circleAnimateArr = [],
         _halfContainerH = 0,
-        _uniqueAttribute = `data-lrc-${Math.random().toString(36).substring(2, 8)}`;
-    _audio = null;
+        _uniqueAttribute = `data-lrc-${Math.random().toString(36).substring(2, 8)}`,
+        _audio = null;
 
     function _doStyleCss() {
-        const baseCSS = `.hide-tlyric p[${_uniqueAttribute}].tly_word{display:none;}p[${_uniqueAttribute}]{color:var(--baseColor);transition: all .2s;margin:var(--pMargin) 0;padding:0;font-size:var(--fontSize);text-align:var(--textAlign);line-height:var(--lineHeight)}p[${_uniqueAttribute}] span{padding-right:.5rem;}p[${_uniqueAttribute}].tly_word{margin:0 !important;font-size: var(--tlyricSize);line-height:var(--tlyricLineHeight)}p[${_uniqueAttribute}].color{color:var(--hilightColor);}p[${_uniqueAttribute}] span.circle{display: none;}p[${_uniqueAttribute}].now span.circle{display: inline-block;width: var(--circleSize);height: var(--circleSize);border-radius: 50%;background-color: var(--baseColor);margin: 0 .4rem;padding: 0 !important;animation: lrc-bounce 500ms infinite alternate;animation-delay: calc(var(--delay) * 1ms);}@keyframes lrc-bounce {to{opacity: .1;transform: translateY(-.5rem) scale(1.2);}}`;
+        const baseCSS = `p[${_uniqueAttribute}]:first-child{margin-top:calc(var(--lrcHeight) / 2);}p[${_uniqueAttribute}]:last-child{margin-bottom:var(--lrcHeight);}.hide-tlyric p[${_uniqueAttribute}].tly_word{display:none;}p[${_uniqueAttribute}]{color:var(--baseColor);transition: all .2s;margin:var(--pMargin) 0;padding:0;font-size:var(--fontSize);text-align:var(--textAlign);line-height:var(--lineHeight)}p[${_uniqueAttribute}] span{padding-right:.5rem;}p[${_uniqueAttribute}].tly_word{margin:0 !important;font-size: var(--tlyricSize);line-height:var(--tlyricLineHeight)}p[${_uniqueAttribute}].color{color:var(--hilightColor);}p[${_uniqueAttribute}] span.circle{display: none;}p[${_uniqueAttribute}].now span.circle{display: inline-block;width: var(--circleSize);height: var(--circleSize);border-radius: 50%;background-color: var(--baseColor);margin: 0 .4rem;padding: 0 !important;animation: lrc-bounce 500ms infinite alternate;animation-delay: calc(var(--delay) * 1ms);}@keyframes lrc-bounce {to{opacity: .1;transform: translateY(-.5rem) scale(1.2);}}`;
         const nCSS = `p[${_uniqueAttribute}] span.color{color:var(--hilightColor) !important}p[${_uniqueAttribute}] span.now {--progress:100;color: transparent;background-clip: text;-webkit-background-clip: text;background-image:linear-gradient(to left, var(--baseColor) calc(var(--progress) * 1%),var(--hilightColor)  0%);}`;
         const styleCss = doc.createElement('style');
         styleCss.textContent = baseCSS + nCSS;
@@ -141,8 +139,6 @@ const LrcOrLyrcKit = (function (win, doc) {
         });
 
         el.appendChild(lrcTpl);
-        // 计算margin值
-        _mH = win.getComputedStyle(_lrcNodeArr[0].target_node).marginBottom.replace('px', '') * 2;
         _addBr();
         if (_audio.currentTime !== 0) {
             _toCurrentLyrc(_audio.currentTime); // 调一次定位函数
@@ -478,11 +474,38 @@ const LrcOrLyrcKit = (function (win, doc) {
         _textMoveAnId = requestAnimationFrame(step);
     }
 
+    let _pAnimateArr = [];
+
+    function _calcLyric(){
+        let idx = 0;
+         // 清除动画
+         _pAnimateArr.forEach(pAn => {
+            pAn.cancel();
+        });
+        _lrcNodeArr.forEach((node) => {
+            let oP = node.target_node;
+            let bound =  oP.getBoundingClientRect();
+            if(bound.top >= 0 && bound.top < _halfContainerH * 3){
+                pAn = oP.animate([
+                    { transform: 'translateY(-5rem)' },
+                ], {
+                    easing: "linear",
+                    duration: 300,
+                    fill: "forwards",
+                    delay: idx * 60
+                });
+                _pAnimateArr.push(pAn);
+                idx++;
+            }
+        });
+    }
+
     /**
      * 歌词滚动
      * 滚动参数
      */
     function _lrcMove(sn, target) {
+        _calcLyric();
         // 处理等待动画
         if (target.dataset.duration) {
             // 清除动画
@@ -502,11 +525,9 @@ const LrcOrLyrcKit = (function (win, doc) {
                 _circleAnimateArr.push(an);
             });
         }
-        const bound = target.getBoundingClientRect();
-        _targetY += bound.top - _halfContainerH + bound.height;
         _smoothScroll(
             _lrcContainer,
-            _targetY,
+            target.offsetTop - _halfContainerH,
             sn
         );
     }
@@ -561,7 +582,10 @@ const LrcOrLyrcKit = (function (win, doc) {
             _onMoveCallBack = null,
             _stopMoveCallBack = null,
             _clickCallBack = null,
-            _unMoveCallBack = null;
+            _unMoveCallBack = null,
+            _animateId = null,
+            _mH = 0,
+            _movePlay = false;
 
         const pcT = opt.pcTimer || 1200;
         const mbT = opt.mbTimer || 800;
@@ -597,7 +621,7 @@ const LrcOrLyrcKit = (function (win, doc) {
 
         let oldTar = null,// 定义定时器
             wheel_timer,
-            show_timer, moveY, animateId;
+            show_timer, moveY;
         opt.getMusicTime = _getMusicTime; // 绑定时间格式化工具
 
         let _startPlay = opt.startPlay;
@@ -611,10 +635,10 @@ const LrcOrLyrcKit = (function (win, doc) {
                     });
                 }
                 _audio.currentTime = oldTar.target_node.dataset.time;
-                cancelAnimationFrame(animateId); // 取消动画
+                _movePlay = false;
+                cancelAnimationFrame(_animateId); // 取消动画
                 _unMoveCallBack && _unMoveCallBack(); // 卸载参照物
-                _clickCallBack && _clickCallBack(); //调用点击后的回放
-                _targetY = _lrcContainer.scrollTop;
+                _clickCallBack && _clickCallBack(); //调用点击后的播放
                 _moveTag = true;
             });
         }
@@ -628,6 +652,9 @@ const LrcOrLyrcKit = (function (win, doc) {
         function posLyric() {
             _moveTag = false; // 暂停歌词自动滚动
             let nowLine, targetRectHeight;
+            if (_lrcNodeArr.length > 0) {
+                _mH = win.getComputedStyle(_lrcNodeArr[0].target_node).marginBottom.replace('px', '') * 2; // 计算margin值
+            }
 
             function findPToLight() {
                 for (let i = 0; i <= _lrcNodeArr.length; i++) {
@@ -653,21 +680,21 @@ const LrcOrLyrcKit = (function (win, doc) {
                     // 执行开始滚动的回调函数
                     _onMoveCallBack && _onMoveCallBack();
                 }
-                animateId = requestAnimationFrame(findPToLight);
+                if (_movePlay) {
+                    _animateId = requestAnimationFrame(findPToLight);
+                }
             }
 
-            animateId = requestAnimationFrame(findPToLight);
+            _animateId = requestAnimationFrame(findPToLight);
 
         }
 
         // 清除滚动提示
         function _clearTips() {
             _unMoveCallBack && _unMoveCallBack(); // 卸载参照物
-            cancelAnimationFrame(animateId); // 取消动画
             _moveTag = true;
-            _targetY = _lrcContainer.scrollTop;
             if (_oldNode) {
-                _lrcMove(100, _oldNode.target_node);
+                _lrcMove(200, _oldNode.target_node);
             }
         }
 
@@ -675,6 +702,7 @@ const LrcOrLyrcKit = (function (win, doc) {
         _lrcContainer.addEventListener('wheel', () => {
             // 滚动开始
             _startMoveCallBack && _startMoveCallBack();
+            _movePlay = true;
             posLyric();
 
             // 清除滚轮事件
@@ -690,6 +718,8 @@ const LrcOrLyrcKit = (function (win, doc) {
             wheel_timer = setTimeout(() => {
                 // 滚动暂停
                 _stopMoveCallBack && _stopMoveCallBack();
+                _movePlay = false;
+                cancelAnimationFrame(_animateId); // 取消动画
                 // 延时关闭
                 show_timer = setTimeout(_clearTips, tagT);
                 if (moveY) {
@@ -719,6 +749,7 @@ const LrcOrLyrcKit = (function (win, doc) {
             if (offsetY > 0) {
                 // 滚动开始
                 _startMoveCallBack && _startMoveCallBack();
+                _movePlay = true;
                 posLyric();
                 // 清除滚轮事件
                 if (wheel_timer) {
@@ -733,6 +764,8 @@ const LrcOrLyrcKit = (function (win, doc) {
                     offsetY = 0;
                     // 滚动暂停
                     _stopMoveCallBack && _stopMoveCallBack();
+                    _movePlay = false;
+                    cancelAnimationFrame(_animateId); // 取消动画
                     // 延时关闭
                     show_timer = setTimeout(_clearTips, tagT);
                     if (moveY) {
@@ -765,7 +798,6 @@ const LrcOrLyrcKit = (function (win, doc) {
         let node = _lrcNodeArr.reduce((prev, curr) => {
             return Math.abs(curr.time - target) < Math.abs(prev.time - target) && curr.time < target && !curr.target_node.dataset.duration ? curr : prev;
         });
-        console.log(_lrcContainer.scrollTop);
         node.span_arr.forEach(spanNode => {
             if (spanNode.stm < target) {
                 spanNode.span.classList.add('color');
@@ -774,7 +806,7 @@ const LrcOrLyrcKit = (function (win, doc) {
 
         _audio.currentTime = target;
         node.target_node.classList.add('now');
-        _lrcMove(350, node.target_node);
+        _lrcMove(200, node.target_node);
         _oldNode = node;
     }
     /** 结束跳转 */
@@ -833,9 +865,19 @@ const LrcOrLyrcKit = (function (win, doc) {
     return {
         init(opt) {
             _init(opt);
-        },
-        translation() {
-            _lrcContainer.classList.toggle('hide-tlyric');
+            return {
+                renderLrc(opt) {
+                    _renderLrc(opt);
+                },
+                addBr() {
+                    _addBr();
+                },
+                translation() {
+                    _lrcContainer.classList.toggle('hide-tlyric');
+                },
+                doLrcLyric: _doLrcLyric,
+                doYrcLyric: _doYrcLyric
+            }
         },
         toCurrentLyrc(currentTime) {
             _toCurrentLyrc(currentTime);
@@ -843,17 +885,9 @@ const LrcOrLyrcKit = (function (win, doc) {
         getMusicTime(currentTime) {
             return _getMusicTime(currentTime);
         },
-        renderLrc(opt) {
-            _renderLrc(opt);
-        },
-        addBr() {
-            _addBr();
-        },
         showThumLryc(currentTime, oNode, highlight, num) {
             _showThumLryc(currentTime, oNode, highlight, num);
-        },
-        doLrcLyric: _doLrcLyric,
-        doYrcLyric: _doYrcLyric
+        }
     };
 })(window, document);
 
