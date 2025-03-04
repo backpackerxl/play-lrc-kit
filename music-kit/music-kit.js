@@ -19,12 +19,14 @@ const LrcOrLyrcKit = (function (win, doc) {
         _textMoveAnId = null,
         _splitLetter = false,
         _circleAnimateArr = [],
+        _pAnimateArr = [],
         _halfContainerH = 0,
+        _lyricJump = false,
         _uniqueAttribute = `data-lrc-${Math.random().toString(36).substring(2, 8)}`,
         _audio = null;
 
     function _doStyleCss() {
-        const baseCSS = `p[${_uniqueAttribute}]:first-child{margin-top:calc(var(--lrcHeight) / 2);}p[${_uniqueAttribute}]:last-child{margin-bottom:var(--lrcHeight);}.hide-tlyric p[${_uniqueAttribute}].tly_word{display:none;}p[${_uniqueAttribute}]{color:var(--baseColor);transition: all .2s;margin:var(--pMargin) 0;padding:0;font-size:var(--fontSize);text-align:var(--textAlign);line-height:var(--lineHeight)}p[${_uniqueAttribute}] span{padding-right:.5rem;}p[${_uniqueAttribute}].tly_word{margin:0 !important;font-size: var(--tlyricSize);line-height:var(--tlyricLineHeight)}p[${_uniqueAttribute}].color{color:var(--hilightColor);}p[${_uniqueAttribute}] span.circle{display: none;}p[${_uniqueAttribute}].now span.circle{display: inline-block;width: var(--circleSize);height: var(--circleSize);border-radius: 50%;background-color: var(--baseColor);margin: 0 .4rem;padding: 0 !important;animation: lrc-bounce 500ms infinite alternate;animation-delay: calc(var(--delay) * 1ms);}@keyframes lrc-bounce {to{opacity: .1;transform: translateY(-.5rem) scale(1.2);}}`;
+        const baseCSS = `p[${_uniqueAttribute}]:first-child{margin-top:calc(var(--lrcHeight) / 3);}p[${_uniqueAttribute}]:last-child{margin-bottom:var(--lrcHeight);}.hide-tlyric p[${_uniqueAttribute}].tly_word{display:none;}p[${_uniqueAttribute}]{color:var(--baseColor);transition: all .2s;margin:var(--pMargin) 0;padding:0;font-size:var(--fontSize);text-align:var(--textAlign);line-height:var(--lineHeight)}p[${_uniqueAttribute}] span{padding-right:.5rem;}p[${_uniqueAttribute}].tly_word{margin:0 !important;font-size: var(--tlyricSize);line-height:var(--tlyricLineHeight)}p[${_uniqueAttribute}].color{color:var(--hilightColor);}p[${_uniqueAttribute}] span.circle{display: none;}p[${_uniqueAttribute}].now span.circle{display: inline-block;width: var(--circleSize);height: var(--circleSize);border-radius: 50%;background-color: var(--baseColor);margin: 0 .4rem;padding: 0 !important;animation: lrc-bounce 500ms infinite alternate;animation-delay: calc(var(--delay) * 1ms);}@keyframes lrc-bounce {to{opacity: .1;transform: translateY(-.5rem) scale(1.2);}}`;
         const nCSS = `p[${_uniqueAttribute}] span.color{color:var(--hilightColor) !important}p[${_uniqueAttribute}] span.now {--progress:100;color: transparent;background-clip: text;-webkit-background-clip: text;background-image:linear-gradient(to left, var(--baseColor) calc(var(--progress) * 1%),var(--hilightColor)  0%);}`;
         const styleCss = doc.createElement('style');
         styleCss.textContent = baseCSS + nCSS;
@@ -324,6 +326,10 @@ const LrcOrLyrcKit = (function (win, doc) {
         _halfContainerH = opt.el.getBoundingClientRect().height / 2;
         // 保存歌词容器
         _lrcContainer = opt.el;
+        // 保存配置
+        if (opt.lyricJump) {
+            _lyricJump = opt.lyricJump;
+        }
 
         if (opt.bindAudio) {
             _bindAudio({ el: opt.bindAudio })
@@ -474,25 +480,19 @@ const LrcOrLyrcKit = (function (win, doc) {
         _textMoveAnId = requestAnimationFrame(step);
     }
 
-    let _pAnimateArr = [];
-
-    function _calcLyric(){
+    function _calcLyric() {
         let idx = 0;
-         // 清除动画
-         _pAnimateArr.forEach(pAn => {
-            pAn.cancel();
-        });
         _lrcNodeArr.forEach((node) => {
             let oP = node.target_node;
-            let bound =  oP.getBoundingClientRect();
-            if(bound.top >= 0 && bound.top < _halfContainerH * 3){
+            let bound = oP.getBoundingClientRect();
+            if (bound.top >= _halfContainerH * -0.5 && bound.top < _halfContainerH * 3) {
                 pAn = oP.animate([
-                    { transform: 'translateY(-5rem)' },
+                    { transform: 'translateY(-2.4rem)' },
                 ], {
                     easing: "linear",
-                    duration: 300,
+                    duration: 360,
                     fill: "forwards",
-                    delay: idx * 60
+                    delay: idx * 36
                 });
                 _pAnimateArr.push(pAn);
                 idx++;
@@ -505,7 +505,13 @@ const LrcOrLyrcKit = (function (win, doc) {
      * 滚动参数
      */
     function _lrcMove(sn, target) {
-        _calcLyric();
+        // 清除动画
+        _pAnimateArr.forEach(pAn => {
+            pAn.cancel();
+        });
+        if (_lyricJump) {
+            _calcLyric();
+        }
         // 处理等待动画
         if (target.dataset.duration) {
             // 清除动画
@@ -651,6 +657,9 @@ const LrcOrLyrcKit = (function (win, doc) {
         // 定位歌词
         function posLyric() {
             _moveTag = false; // 暂停歌词自动滚动
+            _pAnimateArr.forEach(pAn => {
+                pAn.cancel();
+            });
             let nowLine, targetRectHeight;
             if (_lrcNodeArr.length > 0) {
                 _mH = win.getComputedStyle(_lrcNodeArr[0].target_node).marginBottom.replace('px', '') * 2; // 计算margin值
@@ -694,7 +703,12 @@ const LrcOrLyrcKit = (function (win, doc) {
             _unMoveCallBack && _unMoveCallBack(); // 卸载参照物
             _moveTag = true;
             if (_oldNode) {
+                let temp = _lyricJump;
+                _lyricJump = false;
                 _lrcMove(200, _oldNode.target_node);
+                if (temp) {
+                    _lyricJump = true;
+                }
             }
         }
 
@@ -737,28 +751,27 @@ const LrcOrLyrcKit = (function (win, doc) {
             offsetY = 0;
         // 监听移动端滚动事件
         _lrcContainer.addEventListener('touchstart', (e) => {
+            // 清除滚轮事件
+            if (wheel_timer) {
+                clearTimeout(wheel_timer);
+            }
+            if (show_timer) {
+                clearTimeout(show_timer);
+            }
+            // 滚动开始
+            _startMoveCallBack && _startMoveCallBack();
+            _movePlay = true;
             startY = e.touches[0].clientY;
         }, { passive: true });
 
         _lrcContainer.addEventListener('touchmove', (e) => {
+            posLyric();
             offsetY = Math.abs(e.touches[0].clientY - startY);
         }, { passive: true });
 
         // 监听移动端滚动事件
         _lrcContainer.addEventListener('touchend', () => {
             if (offsetY > 0) {
-                // 滚动开始
-                _startMoveCallBack && _startMoveCallBack();
-                _movePlay = true;
-                posLyric();
-                // 清除滚轮事件
-                if (wheel_timer) {
-                    clearTimeout(wheel_timer);
-                }
-                if (show_timer) {
-                    clearTimeout(show_timer);
-                }
-
                 // 延时滚动回弹
                 wheel_timer = setTimeout(() => {
                     offsetY = 0;
@@ -806,7 +819,12 @@ const LrcOrLyrcKit = (function (win, doc) {
 
         _audio.currentTime = target;
         node.target_node.classList.add('now');
+        let temp = _lyricJump;
+        _lyricJump = false;
         _lrcMove(200, node.target_node);
+        if (temp) {
+            _lyricJump = true;
+        }
         _oldNode = node;
     }
     /** 结束跳转 */

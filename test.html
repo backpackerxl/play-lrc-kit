@@ -39,10 +39,10 @@
             --lineHeight: 1.8rem;
             --tlyricSize: 1.2rem;
             --tlyricLineHeight: 1.6rem;
-            --pMargin: 1rem;
+            --pMargin: 1.2rem;
             --textAlign: center;
             --circleSize: .6rem;
-            --lrcHeight: 40rem;
+            --lrcHeight: 45rem;
             width: 35rem;
             height: var(--lrcHeight);
             overflow-y: auto;
@@ -398,11 +398,12 @@
             el: document.getElementById('lrc'),
             lineWidth: lineWidth,
             bindAudio: oAudio,
+            lyricJump: true,
             bindPlacePlay: {
                 startPlay: document.getElementById('startPlay'),
+                lineTag: document.querySelector('#startPlay .line'),
                 timeTag: document.querySelector('#startPlay .time'),
                 playTag: document.querySelector('#startPlay svg'),
-                lineDiv: document.querySelector('#startPlay .line'),
                 pcTimer: 900, // PC端延迟回弹ms
                 mbTimer: 900, // 移动端延迟回弹ms
                 timeTagTimer: 6000, // 点击播放的样式停留时长ms
@@ -410,13 +411,13 @@
                     this.startPlay.classList.remove('show'); // 隐藏背景
                     this.playTag.classList.add('show'); // 显示播放图标
                     this.timeTag.classList.add('show'); // 显示时间
-                    this.lineDiv.classList.add('show'); // 设置基准线显示
+                    this.lineTag.classList.add('show'); // 设置基准线显示
                 },
                 onMoveCallBack: function () {
                     this.timeTag.innerText = this.getMusicTime(this.nowLine.target_node.dataset.time); // 设置播放开始时间
                 },
                 stopMoveCallBack: function () {
-                    this.lineDiv.classList.remove('show'); // 隐藏基准线
+                    this.lineTag.classList.remove('show'); // 隐藏基准线
                     this.startPlay.classList.add('show'); // 显示背景
                     this.startPlay.style.setProperty('--start-height', `${this.targetRectHeight}px`); // 动态设置高度
                     if (navigator.vibrate && clickTrige) {

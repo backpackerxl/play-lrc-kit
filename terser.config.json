@@ -13,7 +13,7 @@
     ]
   },
   "output": {
-    "preamble": "/**\n * @author: backpackerxl 2025/3/1\n * @description: This is a lyrc render kit & Music player control kit\n**/",
+    "preamble": "/**\n * @author: backpackerxl 2025/3/4\n * @description: This is a lyrc render kit & Music player control kit\n**/",
     "comments": false
   }
 }
